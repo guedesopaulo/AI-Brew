@@ -1,0 +1,64 @@
+[project]
+name = "python_dev"
+version = "0.0.2"
+description = "A template repository for Python projects following best practices"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Paulo Guedes", email = "guedesopaulo@gmail.com"},
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.136.1",
+    "fastmcp>=3.2.4",
+    "loguru>=0.7.3",
+    "pydantic-settings>=2.9.1",
+    "uvicorn>=0.34.2",
+]
+
+[dependency-groups]
+dev = [
+    "covdefaults>=2.3.0",
+    "coverage>=7.13.3",
+    "httpx>=0.28.0",
+    "mypy==1.19.1",
+    "pre-commit>=4.2.0",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.15.12",
+    "testcontainers>=4.10.0",
+    "types-cachetools>=6.2.0.20251022",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+plugins = ["covdefaults"]
+
+[tool.coverage.report]
+fail_under = 70
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_reexport = true
+warn_redundant_casts = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tests.*",
+]
+check_untyped_defs = false
+disallow_untyped_defs = false
+disallow_any_generics = false
+disallow_incomplete_defs = false
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
