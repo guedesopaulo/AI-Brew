@@ -9,8 +9,15 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "aiosqlite>=0.20.0",
+    "deepagents>=0.5.7",
     "fastapi>=0.136.1",
     "fastmcp>=3.2.4",
+    "gradio>=5.0.0",
+    "langchain-anthropic>=0.3.0",
+    "langchain-mcp-adapters>=0.2.0",
+    "langchain-ollama>=0.3.0",
+    "langchain-openai>=0.3.0",
     "loguru>=0.7.3",
     "pydantic-settings>=2.9.1",
     "uvicorn>=0.34.2",
@@ -59,6 +66,7 @@ check_untyped_defs = false
 disallow_untyped_defs = false
 disallow_any_generics = false
 disallow_incomplete_defs = false
+
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
