@@ -9,14 +9,18 @@ from fastapi.responses import RedirectResponse
 from fastmcp import FastMCP
 from loguru import logger
 
+from src.config import settings
 from src.endpoints.echo import router as echo_router
+from src.endpoints.recipe import router as recipe_router
 from src.exception_handlers import register_exception_handlers
 from src.middleware import BearerTokenMiddleware
+from src.resources.recipe import init_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     _ = app
+    await init_db(settings.DB_PATH)
     async with mcp_app.router.lifespan_context(mcp_app):
         logger.info("startup complete")
         yield
@@ -24,8 +28,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 
 app = FastAPI(
-    title="python-dev",
-    version="0.0.2",
+    title="AI-Brew",
+    version="0.1.0",
     swagger_ui_parameters={"displayRequestDuration": True},
     lifespan=lifespan,
 )
@@ -33,6 +37,7 @@ app = FastAPI(
 register_exception_handlers(app)
 app.add_middleware(BearerTokenMiddleware)
 app.include_router(echo_router)
+app.include_router(recipe_router)
 
 # MCP: auto-generate tools from all FastAPI routes
 mcp = FastMCP.from_fastapi(app, name="python-dev")
