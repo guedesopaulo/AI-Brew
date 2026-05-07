@@ -16,24 +16,22 @@ API_BASE = os.getenv("MCP_BASE_URL", "http://localhost:8000")
 TOKEN = os.getenv("LOCAL_API_TOKEN", "test-token")
 
 _AUTH = {"Authorization": f"Bearer {TOKEN}"}
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
-def _fetch_recipe(recipe_id: str) -> dict[str, Any] | None:
+async def _fetch_recipe(recipe_id: str) -> dict[str, Any] | None:
     if not recipe_id:
         return None
     try:
-        r = httpx.get(
-            f"{API_BASE}/recipe/{recipe_id}",
-            headers=_AUTH,
-            timeout=10,
-        )
-        return r.json() if r.status_code == 200 else None
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"{API_BASE}/recipe/{recipe_id}", headers=_AUTH)
+            return r.json() if r.status_code == 200 else None
     except httpx.RequestError:
         return None
 
 
 def _read_brew_notes(recipe_id: str) -> str:
-    path = Path("brew_notes") / f"{recipe_id}.md"
+    path = _REPO_ROOT / "brew_notes" / f"{recipe_id}.md"
     return path.read_text() if path.exists() else "*No brew notes yet.*"
 
 
@@ -123,14 +121,14 @@ async def send_message(
         session_id,
         recipe_id,
         "\n\n".join(tool_lines),
-        gr.update(value=_fetch_recipe(recipe_id)),
+        gr.update(value=await _fetch_recipe(recipe_id)),
         gr.update(value=_read_brew_notes(recipe_id)),
         gr.update(value=""),
     )
 
 
-def _refresh(recipe_id: str) -> tuple[gr.update, gr.update]:
-    return gr.update(value=_fetch_recipe(recipe_id)), gr.update(
+async def _refresh(recipe_id: str) -> tuple[gr.update, gr.update]:
+    return gr.update(value=await _fetch_recipe(recipe_id)), gr.update(
         value=_read_brew_notes(recipe_id)
     )
 
