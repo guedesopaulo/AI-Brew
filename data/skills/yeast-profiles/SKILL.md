@@ -1,3 +1,8 @@
+---
+name: yeast-profiles
+description: Yeast strain reference with attenuation, temperature ranges, flavor notes, and quick selection guide for 22 strains
+---
+
 # Yeast Profiles Reference
 
 Format: Strain | Attenuation | Temp Range | Flavor Notes | Best Styles

@@ -1,3 +1,8 @@
+---
+name: ingredient-substitutions
+description: Malt, hop, and yeast substitution tables with flavor difference notes for when ingredients are unavailable
+---
+
 # Ingredient Substitution Reference
 
 Use when a specified ingredient is unavailable or when adapting a recipe.

@@ -2,9 +2,11 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from deepagents import create_deep_agent
+from deepagents.backends import FilesystemBackend
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import StreamableHttpConnection
 from langchain_mcp_adapters.tools import load_mcp_tools
@@ -71,5 +73,9 @@ async def recipe_agent_context(
             checkpointer=_checkpointer,
             subagents=[STYLE_CONSULTANT, INGREDIENT_ANALYST, SENSORY_PROFILER],
             skills=["data/skills/"],
+            backend=FilesystemBackend(
+                root_dir=Path(__file__).resolve().parent.parent.parent,
+                virtual_mode=True,
+            ),
         )
         yield agent

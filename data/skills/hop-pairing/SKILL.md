@@ -1,3 +1,8 @@
+---
+name: hop-pairing
+description: Hop flavor profiles by category and style pairing guide covering 40 varieties with dry hop rate table
+---
+
 # Hop Pairing Reference
 
 ## Hop Profiles by Flavor Category
