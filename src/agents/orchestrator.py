@@ -32,6 +32,7 @@ The MCP tools available to you are:
 - get_recipes_recipes_get          — list all recipes
 
 The current recipe you are working on has id: {recipe_id}
+When calling post_recipe_recipe_post, set the id field to {recipe_id}.
 
 For working notes, save context to brew_notes/{recipe_id}.md using write_file
 instead of keeping it in the conversation.
