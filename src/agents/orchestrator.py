@@ -12,6 +12,9 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
 from src.agents.base import get_model
+from src.agents.subagents import INGREDIENT_ANALYST
+from src.agents.subagents import SENSORY_PROFILER
+from src.agents.subagents import STYLE_CONSULTANT
 from src.config import settings
 
 SYSTEM_PROMPT = """You are an expert homebrewer assistant (BrewAgent).
@@ -30,6 +33,14 @@ The current recipe you are working on has id: {recipe_id}
 
 For working notes, save context to brew_notes/{recipe_id}.md using write_file
 instead of keeping it in the conversation.
+
+You have specialist sub-agents you can delegate to via the task() tool:
+- style-consultant  — BJCP guidelines; OG/IBU/SRM/ABV ranges + key ingredients
+- ingredient-analyst — analyze ingredient compatibility and suggest improvements
+- sensory-profiler  — predict aroma, flavor, mouthfeel, and appearance from a recipe
+
+Use task() to delegate when you need domain expertise. Always include enough
+context in the task description so the sub-agent can work without asking.
 """
 
 # Module-level singleton — persists conversation history + virtual files dict
@@ -58,5 +69,7 @@ async def recipe_agent_context(
             tools=tools,
             system_prompt=SYSTEM_PROMPT.format(recipe_id=recipe_id),
             checkpointer=_checkpointer,
+            subagents=[STYLE_CONSULTANT, INGREDIENT_ANALYST, SENSORY_PROFILER],
+            skills=["data/skills/"],
         )
         yield agent
