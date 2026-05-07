@@ -1,6 +1,10 @@
 """Smoke tests for recipe endpoints (resource layer mocked)."""
 
+import json
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
@@ -147,3 +151,97 @@ def test_get_recipes_empty(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+# ---------------------------------------------------------------------------
+# GET /recipe/{id}/profile
+# ---------------------------------------------------------------------------
+
+
+def test_get_recipe_profile_returns_sensory(client: TestClient) -> None:
+    sensory = {
+        "aroma": "citrus",
+        "flavor": "hoppy",
+        "mouthfeel": "medium",
+        "appearance": "golden",
+    }
+
+    @asynccontextmanager
+    async def _mock_agent_ctx(recipe_id: str) -> AsyncGenerator[MagicMock]:
+        agent = MagicMock()
+        # Simulate real case: JSON in ToolMessage, final AIMessage is empty.
+        tool_msg = MagicMock()
+        tool_msg.content = json.dumps(sensory)
+        final_msg = MagicMock()
+        final_msg.content = ""
+        agent.ainvoke = AsyncMock(return_value={"messages": [tool_msg, final_msg]})
+        yield agent
+
+    with (
+        patch("src.endpoints.recipe.get_recipe", new_callable=AsyncMock) as mock_get,
+        patch("src.endpoints.recipe.recipe_agent_context", _mock_agent_ctx),
+    ):
+        mock_get.return_value = RECIPE_STUB
+        response = client.get("/recipe/abc-123/profile", headers=_auth())
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data == sensory
+
+
+def test_get_recipe_profile_not_found(client: TestClient) -> None:
+    with patch("src.endpoints.recipe.get_recipe", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = None
+        response = client.get("/recipe/missing/profile", headers=_auth())
+
+    assert response.status_code == 404
+
+
+def test_get_recipe_profile_no_profile_in_messages_returns_422(
+    client: TestClient,
+) -> None:
+    @asynccontextmanager
+    async def _mock_agent_ctx(recipe_id: str) -> AsyncGenerator[MagicMock]:
+        agent = MagicMock()
+        msg = MagicMock()
+        msg.content = "Sure! Here's the sensory profile: it smells great."
+        agent.ainvoke = AsyncMock(return_value={"messages": [msg]})
+        yield agent
+
+    with (
+        patch("src.endpoints.recipe.get_recipe", new_callable=AsyncMock) as mock_get,
+        patch("src.endpoints.recipe.recipe_agent_context", _mock_agent_ctx),
+    ):
+        mock_get.return_value = RECIPE_STUB
+        response = client.get("/recipe/abc-123/profile", headers=_auth())
+
+    assert response.status_code == 422
+    assert "did not return" in response.json()["detail"]
+
+
+def test_get_recipe_profile_passes_thread_id(client: TestClient) -> None:
+    captured: dict[str, object] = {}
+
+    @asynccontextmanager
+    async def _mock_agent_ctx(recipe_id: str) -> AsyncGenerator[MagicMock]:
+        agent = MagicMock()
+        msg = MagicMock()
+        msg.content = json.dumps(
+            {"aroma": "a", "flavor": "b", "mouthfeel": "c", "appearance": "d"}
+        )
+
+        async def _ainvoke(inp: object, config: dict) -> dict:
+            captured["thread_id"] = config["configurable"]["thread_id"]
+            return {"messages": [msg]}
+
+        agent.ainvoke = _ainvoke
+        yield agent
+
+    with (
+        patch("src.endpoints.recipe.get_recipe", new_callable=AsyncMock) as mock_get,
+        patch("src.endpoints.recipe.recipe_agent_context", _mock_agent_ctx),
+    ):
+        mock_get.return_value = RECIPE_STUB
+        client.get("/recipe/abc-123/profile", headers=_auth())
+
+    assert captured.get("thread_id") == "profile-abc-123"
