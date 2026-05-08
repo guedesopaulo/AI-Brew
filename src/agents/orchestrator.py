@@ -10,7 +10,9 @@ from deepagents.backends import FilesystemBackend
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import StreamableHttpConnection
 from langchain_mcp_adapters.tools import load_mcp_tools
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 
 from src.agents.base import get_model
@@ -18,6 +20,9 @@ from src.agents.subagents import INGREDIENT_ANALYST
 from src.agents.subagents import SENSORY_PROFILER
 from src.agents.subagents import STYLE_CONSULTANT
 from src.config import settings
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+_PREFS_PATH = _REPO_ROOT / "brew_notes" / "user_preferences.md"
 
 SYSTEM_PROMPT = """You are an expert homebrewer assistant (BrewAgent).
 
@@ -34,8 +39,11 @@ The MCP tools available to you are:
 For hops, the use field MUST be exactly one of: boil, whirlpool, dry-hop.
 Never use "aroma", "late", "flameout", or any other value.
 
-The current recipe you are working on has id: {recipe_id}
-When calling post_recipe_recipe_post, set the id field to {recipe_id}.
+The session recipe ID is: {recipe_id}
+This recipe does NOT exist in the database yet — do NOT call get_recipe_by_id
+before creating it. Your first DB action must always be post_recipe_recipe_post
+with id set to {recipe_id}. Never call get_recipe_by_id_recipe__recipe_id__get
+as a first step; that will 404.
 
 After EVERY post_recipe_recipe_post or patch_recipe_recipe__recipe_id__patch call,
 you MUST immediately call get_recipe_by_id_recipe__recipe_id__get and check that:
@@ -45,8 +53,12 @@ you MUST immediately call get_recipe_by_id_recipe__recipe_id__get and check that
 If any stat is outside the range, patch the fermentables or hops to correct it.
 Never report stats to the user without reading them from get_recipe_by_id first.
 
-For working notes, save context to brew_notes/{recipe_id}.md using write_file
-instead of keeping it in the conversation.
+For working notes use EXACTLY the path brew_notes/{recipe_id}.md — no leading
+slash, no /tmp prefix, no other directory. This path is relative to the project
+root and will be visible in the UI.
+- If the file does not exist yet: write_file to create it.
+- If the file already exists: read_file first, then edit_file to update it.
+Never call write_file on an existing file — it refuses to overwrite.
 
 You have specialist sub-agents you can delegate to via the task() tool:
 - style-consultant  — BJCP guidelines; OG/IBU/SRM/ABV ranges + key ingredients
@@ -57,9 +69,43 @@ Use task() to delegate when you need domain expertise. Always include enough
 context in the task description so the sub-agent can work without asking.
 """
 
-# Module-level singleton — persists conversation history + virtual files dict
-# across /chat calls for the same session_id via MemorySaver checkpoints.
-_checkpointer = MemorySaver()
+# Falls back to MemorySaver so tests never need a real DB.
+# main.py lifespan replaces this with AsyncSqliteSaver at startup.
+_checkpointer: BaseCheckpointSaver = MemorySaver()
+
+
+def set_checkpointer(checkpointer: BaseCheckpointSaver) -> None:
+    """Swap the module-level checkpointer (called once from lifespan)."""
+    global _checkpointer
+    _checkpointer = checkpointer
+
+
+async def prune_old_checkpoints(
+    checkpointer: AsyncSqliteSaver,
+    max_threads: int,
+) -> None:
+    """Delete oldest threads when total exceeds max_threads.
+
+    Uses the public adelete_thread() API so both the checkpoints and writes
+    tables are cleaned up. Calls setup() first so this is safe on first run.
+    """
+    await checkpointer.setup()
+    # Collect thread IDs to prune while holding the lock, then release before
+    # calling adelete_thread() — which also acquires the lock internally.
+    async with checkpointer.lock:
+        async with checkpointer.conn.cursor() as cur:
+            await cur.execute(
+                """
+                SELECT thread_id FROM checkpoints
+                GROUP BY thread_id
+                ORDER BY MAX(checkpoint_id) ASC
+                LIMIT MAX(0, (SELECT COUNT(DISTINCT thread_id) FROM checkpoints) - ?)
+                """,
+                (max_threads,),
+            )
+            rows = await cur.fetchall()
+    for (thread_id,) in rows:
+        await checkpointer.adelete_thread(thread_id)
 
 
 @asynccontextmanager
@@ -86,8 +132,11 @@ async def recipe_agent_context(
             subagents=[STYLE_CONSULTANT, INGREDIENT_ANALYST, SENSORY_PROFILER],
             skills=["data/skills/"],
             backend=FilesystemBackend(
-                root_dir=Path(__file__).resolve().parent.parent.parent,
-                virtual_mode=False,
+                root_dir=_REPO_ROOT,
+                virtual_mode=True,
             ),
+            # Only load user preferences if the file exists — on first run it
+            # doesn't yet and deepagents raises FileNotFoundError for missing paths.
+            memory=([str(_PREFS_PATH)] if _PREFS_PATH.exists() else []),
         )
         yield agent

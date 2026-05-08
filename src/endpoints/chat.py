@@ -17,6 +17,7 @@ router = APIRouter(tags=["chat"])
 @router.post("/chat")
 async def post_chat(body: ChatRequest) -> StreamingResponse:
     async def event_stream() -> AsyncGenerator[str]:
+        stream_ok = False
         try:
             async with recipe_agent_context(body["recipe_id"]) as agent:
                 config: RunnableConfig = {
@@ -52,8 +53,11 @@ async def post_chat(body: ChatRequest) -> StreamingResponse:
                             }
                         )
                         yield f"event: tool_call\ndata: {payload}\n\n"
+                stream_ok = True
         except Exception as exc:
-            yield f"event: error\ndata: {exc!s}\n\n"
+            # ExceptionGroup = LangGraph/MCP teardown noise, not a real error.
+            if not isinstance(exc, BaseExceptionGroup) and not stream_ok:
+                yield f"event: error\ndata: {exc!s}\n\n"
         finally:
             yield "event: done\ndata: \n\n"
 

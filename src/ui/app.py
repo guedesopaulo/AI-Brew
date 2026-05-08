@@ -159,7 +159,7 @@ with gr.Blocks(title="BrewAgent") as demo:
                 notes_md = gr.Markdown("*No brew notes yet.*")
 
     history_state: gr.State = gr.State([])
-    session_state: gr.State = gr.State(None)
+    session_state = gr.BrowserState(None)
 
     _outputs = [
         chatbot,

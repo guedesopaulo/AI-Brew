@@ -176,3 +176,7 @@ cython_debug/
 .ruff_cache/
 
 .claude/
+brew_notes/
+*.db
+*.db-shm
+*.db-wal

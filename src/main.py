@@ -8,8 +8,11 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastmcp import FastMCP
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from loguru import logger
 
+from src.agents.orchestrator import prune_old_checkpoints
+from src.agents.orchestrator import set_checkpointer
 from src.config import settings
 from src.endpoints.chat import router as chat_router
 from src.endpoints.echo import router as echo_router
@@ -24,10 +27,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     _ = app
     await init_db(settings.DB_PATH)
     os.makedirs("brew_notes", exist_ok=True)
-    async with mcp_app.router.lifespan_context(mcp_app):
-        logger.info("startup complete")
-        yield
-        logger.info("shutdown complete")
+    async with AsyncSqliteSaver.from_conn_string(settings.CHECKPOINT_DB_PATH) as cp:
+        set_checkpointer(cp)
+        try:
+            await prune_old_checkpoints(cp, settings.CHECKPOINT_MAX_THREADS)
+        except Exception as exc:
+            logger.warning(f"checkpoint pruning skipped: {exc}")
+        async with mcp_app.router.lifespan_context(mcp_app):
+            logger.info("startup complete")
+            yield
+            logger.info("shutdown complete")
 
 
 app = FastAPI(
