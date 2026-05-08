@@ -31,7 +31,7 @@ def calc_ibu_tinseth(hops: list[Hop], og: float, batch_liters: float) -> float:
         boil_factor = (1 - math.exp(-0.04 * hop["time_min"])) / 4.15
         utilization = bigness * boil_factor
         oz = hop["amount_g"] * _G_TO_OZ
-        total_ibu += utilization * (hop["alpha_pct"] / 100) * oz * 74.89 / batch_gallons
+        total_ibu += utilization * hop["alpha_pct"] * oz * 74.89 / batch_gallons
     return round(total_ibu, 1)
 
 

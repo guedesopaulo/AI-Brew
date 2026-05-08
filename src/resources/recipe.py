@@ -24,7 +24,7 @@ async def init_db(db_path: str) -> None:
 
 
 async def create_recipe(recipe: Recipe, db_path: str) -> str:
-    recipe_id = str(uuid.uuid4())
+    recipe_id = recipe.get("id") or str(uuid.uuid4())
     data: Recipe = {**recipe, "id": recipe_id}
     async with aiosqlite.connect(db_path) as db:
         await db.execute(

@@ -81,8 +81,9 @@ def test_calc_og_empty_fermentables() -> None:
 
 
 def test_calc_ibu_boil_only() -> None:
+    # 30 g Cascade @ 5.5% AA, 60 min, OG 1.050, 20 L → ~19 IBU per Tinseth
     ibu = calc_ibu_tinseth([CASCADE_BOIL], og=1.050, batch_liters=20.0)
-    assert ibu > 0
+    assert 15 < ibu < 25
 
 
 def test_calc_ibu_dry_hop_excluded() -> None:

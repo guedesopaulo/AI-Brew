@@ -15,7 +15,7 @@ class Hop(TypedDict):
     amount_g: float
     alpha_pct: float
     time_min: int
-    use: str  # boil | whirlpool | dry-hop
+    use: str  # MUST be one of: boil | whirlpool | dry-hop
 
 
 class Yeast(TypedDict):

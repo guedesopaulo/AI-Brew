@@ -1,3 +1,8 @@
+---
+name: bjcp-styles
+description: BJCP style reference with OG/IBU/SRM/ABV ranges and key ingredient recommendations for 37 beer styles
+---
+
 # BJCP Style Reference
 
 Format: Name | OG | IBU | SRM | ABV% | Key Malts | Key Hops | Yeast Notes
