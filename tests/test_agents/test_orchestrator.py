@@ -6,9 +6,12 @@ from unittest.mock import patch
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
+import src.agents.orchestrator as orch_module
 from src.agents.orchestrator import recipe_agent_context
+from src.agents.orchestrator import set_checkpointer
 
 
 def _make_mcp_mock() -> MagicMock:
@@ -77,3 +80,13 @@ async def test_recipe_agent_context_no_auth_header_when_token_none() -> None:
         call_kwargs = mock_mcp.call_args[0][0]
         brew_config = call_kwargs["brew"]
         assert "headers" not in brew_config
+
+
+def test_set_checkpointer_swaps_module_singleton() -> None:
+    original = orch_module._checkpointer
+    new_cp = MemorySaver()
+    try:
+        set_checkpointer(new_cp)
+        assert orch_module._checkpointer is new_cp
+    finally:
+        set_checkpointer(original)

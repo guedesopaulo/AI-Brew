@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     # Storage
     MCP_BASE_URL: str = "http://localhost:8000"
     DB_PATH: str = "brew.db"
+    CHECKPOINT_DB_PATH: str = "brew_checkpoints.db"
+    CHECKPOINT_MAX_THREADS: int = 500
 
     # Observability (optional, graceful no-op when disabled)
     LANGFUSE_ENABLED: bool = False
