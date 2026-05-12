@@ -35,8 +35,9 @@ def _read_brew_notes(recipe_id: str) -> str:
     return path.read_text() if path.exists() else "*No brew notes yet.*"
 
 
-# Yield: chatbot, history_state, session_id, recipe_id,
-#        tool_calls_md, recipe_json, notes_md, msg_box
+# Yield order matches _outputs:
+# chatbot, history_state, session_state, recipe_id_box,
+# tool_calls_md, recipe_json, notes_md, msg_box
 _YieldTuple = tuple[
     list[dict[str, str]],
     list[dict[str, str]],

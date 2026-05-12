@@ -1,12 +1,15 @@
-"""Smoke tests for POST /chat — SSE streaming endpoint."""
+"""Smoke tests for POST /chat — SSE streaming."""
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+
+_ENSURE = "src.endpoints.chat.ensure_recipe"
 
 
 def _auth() -> dict[str, str]:
@@ -40,7 +43,10 @@ def client() -> TestClient:
 def test_post_chat_returns_event_stream(client: TestClient) -> None:
     ctx = _make_agent_context([])
 
-    with patch("src.endpoints.chat.recipe_agent_context", ctx):
+    with (
+        patch(_ENSURE, new_callable=AsyncMock),
+        patch("src.endpoints.chat.recipe_agent_context", ctx),
+    ):
         response = client.post(
             "/chat",
             json={
@@ -64,7 +70,10 @@ def test_post_chat_streams_token_events(client: TestClient) -> None:
     ]
     ctx = _make_agent_context(events)
 
-    with patch("src.endpoints.chat.recipe_agent_context", ctx):
+    with (
+        patch(_ENSURE, new_callable=AsyncMock),
+        patch("src.endpoints.chat.recipe_agent_context", ctx),
+    ):
         response = client.post(
             "/chat",
             json={
@@ -88,7 +97,10 @@ def test_post_chat_streams_tool_call_events(client: TestClient) -> None:
     ]
     ctx = _make_agent_context(events)
 
-    with patch("src.endpoints.chat.recipe_agent_context", ctx):
+    with (
+        patch(_ENSURE, new_callable=AsyncMock),
+        patch("src.endpoints.chat.recipe_agent_context", ctx),
+    ):
         response = client.post(
             "/chat",
             json={"recipe_id": "r1", "message": "plan a recipe", "session_id": "s2"},
@@ -110,7 +122,10 @@ def test_post_chat_streams_error_on_exception(client: TestClient) -> None:
         agent.astream_events = _bad_stream
         yield agent
 
-    with patch("src.endpoints.chat.recipe_agent_context", _exploding_ctx):
+    with (
+        patch(_ENSURE, new_callable=AsyncMock),
+        patch("src.endpoints.chat.recipe_agent_context", _exploding_ctx),
+    ):
         response = client.post(
             "/chat",
             json={"recipe_id": "r1", "message": "crash", "session_id": "s3"},
@@ -130,7 +145,10 @@ def test_post_chat_handles_anthropic_content_list(client: TestClient) -> None:
     ]
     ctx = _make_agent_context(events)
 
-    with patch("src.endpoints.chat.recipe_agent_context", ctx):
+    with (
+        patch(_ENSURE, new_callable=AsyncMock),
+        patch("src.endpoints.chat.recipe_agent_context", ctx),
+    ):
         response = client.post(
             "/chat",
             json={"recipe_id": "r1", "message": "suggest a recipe", "session_id": "s4"},

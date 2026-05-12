@@ -23,6 +23,30 @@ async def init_db(db_path: str) -> None:
         await db.commit()
 
 
+async def ensure_recipe(recipe_id: str, db_path: str) -> None:
+    """Create a minimal valid recipe row if one doesn't already exist."""
+    placeholder: Recipe = {
+        "id": recipe_id,
+        "name": "New Recipe",
+        "style": "",
+        "batch_size_liters": 20.0,
+        "fermentables": [],
+        "hops": [],
+        "yeast": {
+            "name": "",
+            "attenuation_pct": 75.0,
+            "min_temp_c": 18.0,
+            "max_temp_c": 24.0,
+        },
+    }
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(
+            "INSERT OR IGNORE INTO recipes (id, json) VALUES (?, ?)",
+            (recipe_id, json.dumps(placeholder)),
+        )
+        await db.commit()
+
+
 async def create_recipe(recipe: Recipe, db_path: str) -> str:
     recipe_id = recipe.get("id") or str(uuid.uuid4())
     data: Recipe = {**recipe, "id": recipe_id}
