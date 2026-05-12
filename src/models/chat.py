@@ -1,4 +1,4 @@
-"""Chat request model."""
+"""Chat request/response models."""
 
 from typing import TypedDict
 
