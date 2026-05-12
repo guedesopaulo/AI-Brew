@@ -3,6 +3,7 @@
 import json
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -140,6 +141,8 @@ def test_get_recipes_returns_list(client: TestClient) -> None:
     assert isinstance(data, list)
     assert len(data) == 1
     assert data[0]["id"] == "abc-123"
+    assert "calculated" in data[0]
+    assert set(data[0]["calculated"].keys()) == {"og", "fg", "abv", "ibu", "srm"}
 
 
 def test_get_recipes_empty(client: TestClient) -> None:
@@ -217,6 +220,61 @@ def test_get_recipe_profile_no_profile_in_messages_returns_422(
 
     assert response.status_code == 422
     assert "did not return" in response.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# GET /recipe/{id}/notes
+# ---------------------------------------------------------------------------
+
+
+def test_get_recipe_notes_returns_content_when_file_exists(
+    client: TestClient, tmp_path: Path
+) -> None:
+    notes_dir = tmp_path / "brew_notes"
+    notes_dir.mkdir()
+    (notes_dir / "abc-123.md").write_text("# My Brew Notes")
+    with patch("src.endpoints.recipe._REPO_ROOT", tmp_path):
+        response = client.get("/recipe/abc-123/notes", headers=_auth())
+    assert response.status_code == 200
+    assert response.json() == {"content": "# My Brew Notes"}
+
+
+def test_get_recipe_notes_returns_empty_when_no_file(
+    client: TestClient, tmp_path: Path
+) -> None:
+    (tmp_path / "brew_notes").mkdir()
+    with patch("src.endpoints.recipe._REPO_ROOT", tmp_path):
+        response = client.get("/recipe/no-notes/notes", headers=_auth())
+    assert response.status_code == 200
+    assert response.json() == {"content": ""}
+
+
+# ---------------------------------------------------------------------------
+# GET /recipes/styles
+# ---------------------------------------------------------------------------
+
+
+def test_get_styles_returns_list(client: TestClient) -> None:
+    response = client.get("/recipes/styles", headers=_auth())
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    first = data[0]
+    assert {"name", "category", "og_min", "og_max", "ibu_min", "abv_min"}.issubset(
+        first.keys()
+    )
+
+
+def test_get_styles_contains_known_style(client: TestClient) -> None:
+    response = client.get("/recipes/styles", headers=_auth())
+    names = [s["name"] for s in response.json()]
+    assert "American IPA" in names
+
+
+# ---------------------------------------------------------------------------
+# GET /recipe/{id}/profile (existing tests follow)
+# ---------------------------------------------------------------------------
 
 
 def test_get_recipe_profile_passes_thread_id(client: TestClient) -> None:

@@ -86,10 +86,26 @@ async def update_recipe(
     return updated
 
 
+_REQUIRED_RECIPE_KEYS = {
+    "id",
+    "name",
+    "style",
+    "batch_size_liters",
+    "fermentables",
+    "hops",
+    "yeast",
+}
+
+
 async def list_recipes(db_path: str) -> list[Recipe]:
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(
             "SELECT json FROM recipes ORDER BY created_at DESC"
         ) as cursor:
             rows = await cursor.fetchall()
-    return [json.loads(row[0]) for row in rows]
+    results = []
+    for row in rows:
+        data = json.loads(row[0])
+        if _REQUIRED_RECIPE_KEYS.issubset(data.keys()):
+            results.append(data)
+    return results
