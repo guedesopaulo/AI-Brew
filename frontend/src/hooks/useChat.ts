@@ -7,10 +7,10 @@ interface UseChatReturn {
   messages: ChatMessage[];
   toolCalls: ToolCallPayload[];
   status: ChatStatus;
-  send: (message: string, recipeId: string, sessionId: string) => Promise<void>;
+  send: (message: string, sessionId: string) => Promise<void>;
 }
 
-export function useChat(_recipeId: string): UseChatReturn {
+export function useChat(recipeId: string): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [toolCalls, setToolCalls] = useState<ToolCallPayload[]>([]);
   const [status, setStatus] = useState<ChatStatus>("idle");
@@ -18,7 +18,7 @@ export function useChat(_recipeId: string): UseChatReturn {
   const abortRef = useRef<boolean>(false);
 
   const send = useCallback(
-    async (message: string, recipeId: string, sessionId: string) => {
+    async (message: string, sessionId: string) => {
       abortRef.current = false;
       setStatus("streaming");
       setMessages((prev) => [
@@ -29,7 +29,7 @@ export function useChat(_recipeId: string): UseChatReturn {
 
       try {
         const stream = streamChat({
-          recipe_id: _recipeId,
+          recipe_id: recipeId,
           message,
           session_id: sessionId,
         });
@@ -69,11 +69,8 @@ export function useChat(_recipeId: string): UseChatReturn {
           }
         }
 
-        // Refresh recipe and notes after agent completes
         void queryClient.invalidateQueries({ queryKey: ["recipe", recipeId] });
-        void queryClient.invalidateQueries({
-          queryKey: ["recipe-notes", recipeId],
-        });
+        void queryClient.invalidateQueries({ queryKey: ["recipe-notes", recipeId] });
         setStatus("done");
       } catch (err) {
         setMessages((prev) => {
@@ -89,7 +86,7 @@ export function useChat(_recipeId: string): UseChatReturn {
         setStatus("error");
       }
     },
-    [queryClient],
+    [recipeId, queryClient],
   );
 
   return { messages, toolCalls, status, send };

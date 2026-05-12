@@ -4,6 +4,7 @@ import json
 import uuid
 
 import aiosqlite
+from loguru import logger
 
 from src.models.recipe import Recipe
 from src.models.recipe import RecipePatch
@@ -106,6 +107,11 @@ async def list_recipes(db_path: str) -> list[Recipe]:
     results = []
     for row in rows:
         data = json.loads(row[0])
-        if _REQUIRED_RECIPE_KEYS.issubset(data.keys()):
-            results.append(data)
+        missing = _REQUIRED_RECIPE_KEYS - data.keys()
+        if missing:
+            logger.warning(
+                "skipping recipe row missing keys: {} (id={})", missing, data.get("id")
+            )
+            continue
+        results.append(data)
     return results

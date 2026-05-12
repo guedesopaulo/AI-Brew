@@ -26,7 +26,7 @@ export function ChatPanel({ recipeId }: ChatPanelProps) {
     const text = input.trim();
     if (!text || status === "streaming") return;
     setInput("");
-    await send(text, recipeId, sessionId);
+    await send(text, sessionId);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {

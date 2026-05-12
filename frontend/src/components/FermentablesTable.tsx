@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -22,27 +23,44 @@ export function FermentablesTable({
   onChange,
   disabled,
 }: FermentablesTableProps) {
-  function update(index: number, field: keyof Fermentable, value: string) {
-    const updated = fermentables.map((f, i) => {
-      if (i !== index) return f;
-      const numFields: (keyof Fermentable)[] = ["amount_kg", "color_ebc", "ppg"];
-      return {
-        ...f,
-        [field]: numFields.includes(field) ? parseFloat(value) || 0 : value,
-      };
-    });
-    onChange(updated);
+  const [local, setLocal] = useState<Fermentable[]>(fermentables);
+
+  // Sync when the prop changes (e.g. agent patches the recipe)
+  useEffect(() => {
+    setLocal(fermentables);
+  }, [fermentables]);
+
+  function updateLocal(index: number, field: keyof Fermentable, value: string) {
+    const numFields: (keyof Fermentable)[] = ["amount_kg", "color_ebc", "ppg"];
+    setLocal((prev) =>
+      prev.map((f, i) =>
+        i !== index
+          ? f
+          : {
+              ...f,
+              [field]: numFields.includes(field) ? parseFloat(value) || 0 : value,
+            },
+      ),
+    );
+  }
+
+  function commit() {
+    onChange(local);
   }
 
   function remove(index: number) {
-    onChange(fermentables.filter((_, i) => i !== index));
+    const updated = local.filter((_, i) => i !== index);
+    setLocal(updated);
+    onChange(updated);
   }
 
   function add() {
-    onChange([
-      ...fermentables,
+    const updated = [
+      ...local,
       { name: "New Malt", amount_kg: 1.0, color_ebc: 5, ppg: 37 },
-    ]);
+    ];
+    setLocal(updated);
+    onChange(updated);
   }
 
   return (
@@ -58,14 +76,16 @@ export function FermentablesTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {fermentables.map((f, i) => (
+          {local.map((f, i) => (
             <TableRow key={i}>
               <TableCell>
                 <Input
                   value={f.name}
                   disabled={disabled}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => update(i, "name", e.target.value)}
-                  onBlur={() => onChange(fermentables)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    updateLocal(i, "name", e.target.value)
+                  }
+                  onBlur={commit}
                 />
               </TableCell>
               <TableCell>
@@ -74,8 +94,10 @@ export function FermentablesTable({
                   step="0.1"
                   value={f.amount_kg}
                   disabled={disabled}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => update(i, "amount_kg", e.target.value)}
-                  onBlur={() => onChange(fermentables)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    updateLocal(i, "amount_kg", e.target.value)
+                  }
+                  onBlur={commit}
                 />
               </TableCell>
               <TableCell>
@@ -83,8 +105,10 @@ export function FermentablesTable({
                   type="number"
                   value={f.color_ebc}
                   disabled={disabled}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => update(i, "color_ebc", e.target.value)}
-                  onBlur={() => onChange(fermentables)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    updateLocal(i, "color_ebc", e.target.value)
+                  }
+                  onBlur={commit}
                 />
               </TableCell>
               <TableCell>
@@ -92,8 +116,10 @@ export function FermentablesTable({
                   type="number"
                   value={f.ppg}
                   disabled={disabled}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => update(i, "ppg", e.target.value)}
-                  onBlur={() => onChange(fermentables)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    updateLocal(i, "ppg", e.target.value)
+                  }
+                  onBlur={commit}
                 />
               </TableCell>
               <TableCell>

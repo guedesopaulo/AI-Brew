@@ -20,7 +20,7 @@ import { BrewNotesPanel } from "@/components/BrewNotesPanel";
 import { SensoryProfileModal } from "@/components/SensoryProfileModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useRecipe, usePatchRecipe, useStyles } from "@/hooks/useRecipe";
-import type { Fermentable, Hop, Yeast } from "@/types/recipe";
+import type { Fermentable, Hop, Yeast, RecipePatch } from "@/types/recipe";
 
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -45,7 +45,7 @@ export function RecipeDetailPage() {
     );
   }
 
-  function save(field: string, value: unknown) {
+  function save<K extends keyof RecipePatch>(field: K, value: RecipePatch[K]) {
     patch.mutate({ [field]: value });
   }
 
