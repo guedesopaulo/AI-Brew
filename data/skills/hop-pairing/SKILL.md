@@ -1,6 +1,6 @@
 ---
 name: hop-pairing
-description: Hop flavor profiles by category and style pairing guide covering 40 varieties with dry hop rate table
+description: Hop flavor profiles, style pairing guide, dry hop rates, Cryo hops, biotransformation technique, and substitution ratio formula for 40+ varieties
 ---
 
 # Hop Pairing Reference
@@ -121,12 +121,21 @@ description: Hop flavor profiles by category and style pairing guide covering 40
 
 ## Dry Hop Rates (Guidelines)
 
-| Intensity | Rate | Application |
-|-----------|------|-------------|
-| Subtle | 5–10 g/L | Background aroma, session beers |
-| Moderate | 10–20 g/L | Standard IPA, APA |
-| Heavy | 20–40 g/L | NEIPA, West Coast IPA |
-| Extreme | 40+ g/L | Experimental/competition |
+All rates are **total dry hop weight across all varieties combined**, not per individual hop.
+Split the total across 2–3 varieties as desired (e.g. 15 g/L total = 8 g/L Citra + 7 g/L Mosaic).
+
+| Intensity | Total rate | Application |
+|-----------|-----------|-------------|
+| Subtle | 3–5 g/L | Background aroma, session beers |
+| Moderate | 5–10 g/L | Standard IPA, APA |
+| Heavy | 10–15 g/L | West Coast IPA |
+| Very heavy | 15–25 g/L | NEIPA — commercial standard |
+| Extreme | 30+ g/L | Experimental/competition |
+
+**NEIPA DDH example (20 L batch):**
+- First charge (biotransformation, day 2–4): 8–12 g/L total → e.g. Citra 80 g + Mosaic 80 g = 160 g (4 g/L each, 8 g/L total)
+- Second charge (cold-side, post-FG): 4–6 g/L total → e.g. Citra Cryo 50 g + Mosaic Cryo 40 g = 90 g (4.5 g/L total)
+- **Total: ~250 g for 20 L** — not 1,200 g
 
 ## Hop Addition Timing
 
@@ -136,3 +145,83 @@ description: Hop flavor profiles by category and style pairing guide covering 40
 | Flavor | 15–20 min | Flavor + some aroma |
 | Whirlpool/Flameout | 0 min (80°C+) | Aroma + some IBU |
 | Dry Hop | Post-fermentation | Pure aroma, no IBU |
+
+---
+
+## Cryo Hops
+
+Cryo hops are concentrated lupulin pellets containing roughly **2× the alpha acids and aromatic oils** of standard T90 pellets. Key properties:
+- Use ~50% of the T90 weight to achieve the same IBU contribution
+- Dramatically less vegetal/plant material — cleaner aroma extraction per gram
+- Best used as dry hops for intense aroma without chlorophyll or harsh vegetal notes
+- Available varieties: Citra Cryo, Mosaic Cryo, Simcoe Cryo, Galaxy Cryo, Amarillo Cryo, Centennial Cryo
+- Typical dry hop rate: 3–8 g/L Cryo ≈ 6–16 g/L standard pellets
+
+**When to use:** NEIPA and West Coast IPA where aroma purity is the priority. Cost is higher per gram than T90; not necessary for standard beers. Best combined with standard T90 pellets (T90 for volume/oil extraction, Cryo for intensity).
+
+---
+
+## Biotransformation Dry Hopping
+
+Biotransformation occurs when dry hops are added during **active fermentation** (within the first 2–4 days, at peak krausen). Active yeast enzymatically converts bound hop glycosides into free volatile thiols and other aromatic compounds — creating new tropical/citrus flavour not achievable with post-fermentation dry hopping alone.
+
+**Key yeasts for biotransformation (in order of activity):**
+- London Ale III (WLP066 / Wyeast 1318) — highest thiol conversion; essential for commercial-grade NEIPA
+- Conan / Vermont Ale (The Yeast Bay) — strong biotransformation + juicy profile
+- Verdant IPA (Lallemand) — strong biotransformation activity; dry yeast convenience
+- Voss Kveik (Lallemand) — moderate biotransformation at high temps (25–32°C)
+
+**Best hops for biotransformation (highest precursor content):**
+- Citra, Mosaic, Galaxy, Amarillo — highest bound thiol precursors
+- Strata — unique cannabis/tropical profile strongly enhanced by bioT
+- Nelson Sauvin, Idaho 7, Talus
+
+**Technique:**
+1. Add dry hops at active fermentation krausen (day 2–4 post-pitch)
+2. Keep at fermentation temperature (17–22°C) for 3–5 days through end of active fermentation
+3. Allow to reach FG, then cold crash normally
+4. Optional: second cold-side dry hop addition (post-crash, 0–4°C) for additional fresh aroma
+
+**Biotransformation vs cold-side comparison:**
+| Method | When | Result |
+|--------|------|--------|
+| Biotransformation (warm-side) | Day 2–4 of fermentation | New tropical/thiol compounds via enzyme conversion |
+| Cold-side (post-FG) | After FG, before cold crash | Clean, stable aroma from hop oils only |
+| Double dry hop (DDH) | Warm + cold | Maximum aroma complexity — standard for commercial NEIPA |
+
+---
+
+## Hop Substitution Ratios
+
+When a hop is unavailable, adjust weight by alpha acid ratio to maintain equivalent IBU:
+
+```
+substitute_g = original_g × (original_AA% ÷ substitute_AA%)
+```
+
+**Example:** 30 g Citra (12% AA) substituted with Amarillo (9% AA):
+→ 30 × (12 ÷ 9) = **40 g Amarillo**
+
+**Important caveats:**
+- The AA% ratio only corrects for bittering contribution (IBU)
+- Aroma and flavour character still differs — driven by oil composition (humulene, myrcene, linalool, geraniol)
+- For dry hops (aroma-only additions) use the **same weight** — the IBU ratio is irrelevant for dry hops
+- Always note the flavour character shift in brew notes when substituting
+
+**Common alpha acid quick reference:**
+| Hop | Typical AA% |
+|-----|------------|
+| Citra | 11–13 |
+| Mosaic | 11–13.5 |
+| Galaxy | 11–16 |
+| Amarillo | 8–11 |
+| Cascade | 4.5–7 |
+| Centennial | 9–11.5 |
+| Chinook | 12–14 |
+| Simcoe | 12–14 |
+| Saaz | 3–4.5 |
+| Hallertau Mittelfrueh | 3.5–5.5 |
+| East Kent Goldings | 4–5.5 |
+| Fuggle | 3.5–5.5 |
+| Magnum | 12–14 |
+| Columbus (CTZ) | 14–17 |

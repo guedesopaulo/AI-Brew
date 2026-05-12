@@ -128,3 +128,77 @@ When specific water profile ingredients are unavailable:
 - More sulfate → drier, more bitter perception
 - More chloride → rounder, fuller, sweeter perception
 - Bicarbonate → raises mash/wort pH (counteract with acid malt or lactic acid)
+
+---
+
+## Extract Equivalents
+
+When converting an all-grain recipe to extract (or vice versa):
+
+| Grain format | → Dry Malt Extract (DME) | → Liquid Malt Extract (LME) |
+|-------------|--------------------------|------------------------------|
+| 1 kg base malt (75% brewhouse efficiency) | ~0.70–0.75 kg DME | ~0.85–0.90 kg LME |
+| 1 kg base malt (70% efficiency) | ~0.65–0.70 kg DME | ~0.80–0.85 kg LME |
+
+**Colour guidance:**
+- Pale/Extra Light DME or LME for styles up to ~5 SRM (Pilsner, Helles, Wheat)
+- Light/Pale DME for styles up to ~10 SRM (APA, English Pale)
+- Munich/Dark LME adds colour and malt character; use for Amber, Brown, Porter base
+- Specialty grains (Crystal, Roasted) are steeped separately and added to the extract wort — no conversion needed
+
+**PPG reference:**
+- Base malt grain: ~37 PPG (points per pound per gallon)
+- Dry Malt Extract (DME): ~44–46 PPG
+- Liquid Malt Extract (LME): ~36–38 PPG
+- All extracts are fully fermentable by definition — FG will be slightly lower than all-grain equivalents
+
+---
+
+## Adjunct Ratios (Maximum % of Total Grain Bill)
+
+Exceeding these limits causes lautering, attenuation, or flavour problems:
+
+| Adjunct | Max % | Effect if exceeded |
+|---------|-------|--------------------|
+| Flaked oats | 20–25% (30% for oat stout) | Stuck sparge, excessive starch haze, cloying body |
+| Flaked wheat | 30% | Stuck sparge, protein haze issues |
+| Flaked corn / maize | 30% | Astringency, poor head retention above 35% |
+| Flaked rice | 25% | Thin body if over 30%, stuck sparge risk |
+| Flaked barley | 20% | Excessive beta-glucan — very sticky lauter |
+| Lactose | 3–8% | Cloyingly sweet above 8%; does not ferment |
+| Table sugar / sucrose | 15–20% | Thin body, "cidery" character above 20% |
+| Honey | 10–15% | Floral aroma washed out above 15%; thin body |
+| Rye malt | 15–20% | Extremely sticky sparge above 20%; add rice hulls |
+| Smoked malt (beechwood) | 30–50% | Overwhelming smoke above 60%; blend to taste |
+| Acid malt (Sauermalz) | 3–5% | pH drops too fast above 5%; bitter/sharp |
+
+**General rule:** Always add rice hulls (200–400 g per 20 L batch) when using >15% flaked/unmalted adjuncts to prevent a stuck sparge.
+
+---
+
+## Regional Availability Notes
+
+When adapting recipes for local ingredient markets:
+
+### United Kingdom
+- **Base malts**: Maris Otter (Thomas Fawcett, Crisp, Muntons) widely available; Golden Promise (Scottish equivalent); Pearl Malt (maltier than standard Pale)
+- **Hops**: Fuggles, East Kent Goldings, Challenger always available fresh; Target, Admiral, Boadicea common
+- **Specialty**: Crisp and Thomas Fawcett crystal/roasted malts; Simpsons for premium specialty
+- **Substitutions**: Maris Otter ↔ Golden Promise (near-identical); US 2-Row produces slightly less biscuity result
+
+### United States
+- **Base malts**: Rahr 2-Row (budget, clean), Great Western (widely available), Briess (North American styles), Avangard Pilsner
+- **Hops**: Cascade, Centennial, Chinook, Columbus, Citra, Mosaic, Simcoe readily available; Amarillo and Galaxy sometimes scarce — substitute with Citra blend
+- **Specialty**: Briess Crystal malts; Weyermann (imported) for German styles
+- **Substitutions**: Any clean 2-Row ↔ Rahr ↔ Great Western at same weight
+
+### Germany / EU
+- **Base malts**: Weyermann (Bamberg) is the standard — Pilsner, Munich, Vienna, Carafa; Best Malz as alternative
+- **Hops**: Hallertau region: Hallertau Mittelfrueh, Hallertau Blanc, Hüll Melon, Perle, Tradition; Saaz from CZ easily available
+- **Specialty**: Weyermann Carafa (dehusked dark malts) preferred for Schwarzbier, Dark Lager; Cara-Munich series for Belgian/German styles
+- **Substitutions**: Weyermann Pilsner ↔ Avangard ↔ Best Malz Pilsner at same weight; Hallertau ↔ Tettnang at same weight
+
+### Australia / NZ
+- **Base malts**: Barrett Burston (BB) Pale (domestic standard), Joe White (domestic), Thomas Fawcett imported
+- **Hops**: Galaxy, Enigma, Vic Secret widely available; Motueka, Nelson Sauvin, Riwaka from NZ
+- **Substitutions**: BB Pale ↔ Joe White at same weight; Galaxy ↔ Citra + Ekuanot blend for tropical profile
