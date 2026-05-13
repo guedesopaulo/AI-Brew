@@ -98,6 +98,22 @@ _REQUIRED_RECIPE_KEYS = {
 }
 
 
+async def clone_recipe(recipe_id: str, db_path: str) -> str | None:
+    """Clone a recipe with a new UUID. Returns the new id, or None if not found."""
+    existing = await get_recipe(recipe_id, db_path)
+    if existing is None:
+        return None
+    new_id = str(uuid.uuid4())
+    copy: Recipe = {**existing, "id": new_id, "name": f"{existing['name']} (copy)"}
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(
+            "INSERT INTO recipes (id, json) VALUES (?, ?)",
+            (new_id, json.dumps(copy)),
+        )
+        await db.commit()
+    return new_id
+
+
 async def delete_recipe(recipe_id: str, db_path: str) -> bool:
     """Delete a recipe by id. Returns True if deleted, False if not found."""
     async with aiosqlite.connect(db_path) as db:

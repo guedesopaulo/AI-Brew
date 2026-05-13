@@ -273,6 +273,32 @@ def test_get_styles_contains_known_style(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
+# POST /recipe/{id}/clone
+# ---------------------------------------------------------------------------
+
+
+def test_clone_recipe_returns_201_with_new_id(client: TestClient) -> None:
+    with patch(
+        "src.endpoints.recipe.clone_recipe", new_callable=AsyncMock
+    ) as mock_clone:
+        mock_clone.return_value = "new-456"
+        response = client.post("/recipe/abc-123/clone", headers=_auth())
+
+    assert response.status_code == 201
+    assert response.json() == {"id": "new-456"}
+
+
+def test_clone_recipe_not_found_returns_404(client: TestClient) -> None:
+    with patch(
+        "src.endpoints.recipe.clone_recipe", new_callable=AsyncMock
+    ) as mock_clone:
+        mock_clone.return_value = None
+        response = client.post("/recipe/missing/clone", headers=_auth())
+
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
 # DELETE /recipe/{id}
 # ---------------------------------------------------------------------------
 

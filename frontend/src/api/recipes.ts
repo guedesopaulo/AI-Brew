@@ -48,3 +48,7 @@ export async function getSensoryProfile(id: string): Promise<SensoryProfile> {
 export async function deleteRecipe(id: string): Promise<void> {
   await apiFetch<void>(`/recipe/${id}`, { method: "DELETE" });
 }
+
+export async function cloneRecipe(id: string): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(`/recipe/${id}/clone`, { method: "POST" });
+}

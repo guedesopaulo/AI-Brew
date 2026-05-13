@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Trash2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Copy, Trash2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -20,7 +20,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { StatsBar } from "./StatsBar";
-import { useDeleteRecipe } from "@/hooks/useRecipe";
+import { useCloneRecipe, useDeleteRecipe } from "@/hooks/useRecipe";
 import type { RecipeWithStats } from "@/types/recipe";
 
 interface RecipeCardProps {
@@ -28,8 +28,16 @@ interface RecipeCardProps {
 }
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const cloneMutation = useCloneRecipe();
   const deleteMutation = useDeleteRecipe();
+
+  function handleClone() {
+    cloneMutation.mutate(recipe.id, {
+      onSuccess: (data) => navigate(`/recipe/${data.id}`),
+    });
+  }
 
   function handleDelete() {
     deleteMutation.mutate(recipe.id, {
@@ -45,7 +53,17 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             <CardTitle className="text-lg">{recipe.name}</CardTitle>
             <p className="text-sm text-muted-foreground">{recipe.style}</p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleClone}
+              disabled={cloneMutation.isPending}
+            >
+              <Copy className="h-4 w-4 text-muted-foreground" />
+              <span className="sr-only">Clone recipe</span>
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
               <Trash2 className="h-4 w-4 text-muted-foreground" />
               <span className="sr-only">Delete recipe</span>
@@ -72,6 +90,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-1">

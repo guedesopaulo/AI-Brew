@@ -7,6 +7,7 @@ import json
 import aiosqlite
 import pytest
 
+from src.resources.recipe import clone_recipe
 from src.resources.recipe import delete_recipe
 from src.resources.recipe import ensure_recipe
 from src.resources.recipe import get_recipe
@@ -48,6 +49,24 @@ async def test_ensure_recipe_placeholder_has_valid_fields(db_path: str) -> None:
     assert recipe["hops"] == []
     assert recipe["yeast"]["attenuation_pct"] == 75.0
     assert recipe["batch_size_liters"] == 20.0
+
+
+@pytest.mark.anyio
+async def test_clone_recipe_creates_copy(db_path: str) -> None:
+    await ensure_recipe("orig-1", db_path)
+    new_id = await clone_recipe("orig-1", db_path)
+    assert new_id is not None
+    assert new_id != "orig-1"
+    copy = await get_recipe(new_id, db_path)
+    assert copy is not None
+    assert copy["id"] == new_id
+    assert copy["name"] == "New Recipe (copy)"
+
+
+@pytest.mark.anyio
+async def test_clone_recipe_returns_none_when_not_found(db_path: str) -> None:
+    result = await clone_recipe("nonexistent", db_path)
+    assert result is None
 
 
 @pytest.mark.anyio
