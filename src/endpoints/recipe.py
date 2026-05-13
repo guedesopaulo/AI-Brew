@@ -6,10 +6,13 @@ from pathlib import Path
 from fastapi import APIRouter
 from fastapi import HTTPException
 from fastapi import Response
+from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 
+from src.agents.orchestrator import get_checkpointer
 from src.agents.orchestrator import recipe_agent_context
 from src.config import settings
+from src.models.chat import HistoryMessage
 from src.models.recipe import BrewNotes
 from src.models.recipe import Recipe
 from src.models.recipe import RecipePatch
@@ -85,6 +88,37 @@ async def get_recipe_notes(recipe_id: str) -> BrewNotes:
 @router.get("s/styles")
 async def get_styles() -> list[Style]:
     return _STYLES
+
+
+@router.get("/{recipe_id}/history")
+async def get_recipe_history(recipe_id: str, session_id: str) -> list[HistoryMessage]:
+    if await get_recipe(recipe_id, settings.DB_PATH) is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    cp = get_checkpointer()
+    tup = await cp.aget_tuple({"configurable": {"thread_id": session_id}})
+    if tup is None:
+        return []
+    messages = tup.checkpoint.get("channel_values", {}).get("messages", [])
+    result: list[HistoryMessage] = []
+    for msg in messages:
+        if isinstance(msg, HumanMessage):
+            result.append({"role": "user", "content": str(msg.content)})
+        elif isinstance(msg, AIMessage):
+            raw = msg.content
+            if isinstance(raw, str):
+                text: str | None = raw
+            else:
+                text = next(
+                    (
+                        b.get("text")
+                        for b in raw
+                        if isinstance(b, dict) and b.get("type") == "text"
+                    ),
+                    None,
+                )
+            if text and text.strip():
+                result.append({"role": "assistant", "content": text})
+    return result
 
 
 @router.get("/{recipe_id}/profile")

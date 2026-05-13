@@ -1,24 +1,39 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { streamChat } from "@/api/chat";
+import { streamChat, getChatHistory } from "@/api/chat";
 import type { ChatMessage, ChatStatus, ToolCallPayload } from "@/types/chat";
 
 interface UseChatReturn {
   messages: ChatMessage[];
   toolCalls: ToolCallPayload[];
   status: ChatStatus;
-  send: (message: string, sessionId: string) => Promise<void>;
+  isLoadingHistory: boolean;
+  send: (message: string) => Promise<void>;
 }
 
-export function useChat(recipeId: string): UseChatReturn {
+export function useChat(recipeId: string, sessionId: string): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [toolCalls, setToolCalls] = useState<ToolCallPayload[]>([]);
   const [status, setStatus] = useState<ChatStatus>("idle");
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const queryClient = useQueryClient();
   const abortRef = useRef<boolean>(false);
 
+  useEffect(() => {
+    if (!sessionId) return;
+    setIsLoadingHistory(true);
+    getChatHistory(recipeId, sessionId)
+      .then((history) => {
+        if (history.length > 0) setMessages(history);
+      })
+      .catch((err: unknown) => {
+        console.error("Failed to load chat history:", err);
+      })
+      .finally(() => setIsLoadingHistory(false));
+  }, [recipeId, sessionId]);
+
   const send = useCallback(
-    async (message: string, sessionId: string) => {
+    async (message: string) => {
       abortRef.current = false;
       setStatus("streaming");
       setMessages((prev) => [
@@ -86,8 +101,8 @@ export function useChat(recipeId: string): UseChatReturn {
         setStatus("error");
       }
     },
-    [recipeId, queryClient],
+    [recipeId, sessionId, queryClient],
   );
 
-  return { messages, toolCalls, status, send };
+  return { messages, toolCalls, status, isLoadingHistory, send };
 }

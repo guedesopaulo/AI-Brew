@@ -40,7 +40,7 @@ async def _yield_events(
         if kind == "on_chat_model_stream":
             text = _stream_text(event)
             if text:
-                yield f"event: token\ndata: {text}\n\n"
+                yield f"event: token\ndata: {json.dumps(text)}\n\n"
         elif kind == "on_tool_start":
             payload = json.dumps(
                 {"name": event["name"], "input": event["data"].get("input", {})}
