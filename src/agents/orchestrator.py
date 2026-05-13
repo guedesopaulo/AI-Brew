@@ -44,6 +44,12 @@ before you start). Use patch_recipe_recipe to set or update any fields. Never
 call post_recipe_recipe_post for this recipe — it already has a row and a second
 INSERT will fail with a conflict error.
 
+At the start of every user message that involves discussing or modifying the
+recipe, call get_recipe_by_id_recipe FIRST to read the current state from the
+database. Never rely on ingredient amounts, stats, or field values from prior
+conversation turns — the recipe may have been edited externally between turns.
+Always verify from the database before making claims or plans.
+
 BEFORE calling patch_recipe_recipe, you MUST first send a message to the user
 describing exactly what you plan to change (ingredient names, amounts, style,
 etc.) and why. Wait for the user to reply.
@@ -74,6 +80,13 @@ You have specialist sub-agents you can delegate to via the task() tool:
 
 Use task() to delegate when you need domain expertise. Always include enough
 context in the task description so the sub-agent can work without asking.
+
+CRITICAL OUTPUT RULES:
+- When a sub-agent or tool returns JSON, never echo or repeat the raw JSON in your
+  response. Extract the values and present them as markdown prose or a formatted list.
+- Never start a response with a JSON object or code block containing raw tool output.
+- Always begin your response with natural language, then present structured data as
+  a formatted markdown list (e.g. "**OG:** 1.044 - 1.060") not as raw JSON.
 """
 
 # Falls back to MemorySaver so tests never need a real DB.
@@ -85,6 +98,11 @@ def set_checkpointer(checkpointer: BaseCheckpointSaver) -> None:
     """Swap the module-level checkpointer (called once from lifespan)."""
     global _checkpointer
     _checkpointer = checkpointer
+
+
+def get_checkpointer() -> BaseCheckpointSaver:
+    """Return the active checkpointer (MemorySaver or AsyncSqliteSaver)."""
+    return _checkpointer
 
 
 async def prune_old_checkpoints(

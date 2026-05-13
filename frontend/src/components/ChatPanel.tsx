@@ -14,7 +14,7 @@ interface ChatPanelProps {
 
 export function ChatPanel({ recipeId }: ChatPanelProps) {
   const sessionId = useSession(recipeId);
-  const { messages, toolCalls, status, send } = useChat(recipeId);
+  const { messages, toolCalls, status, isLoadingHistory, send } = useChat(recipeId, sessionId);
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +26,7 @@ export function ChatPanel({ recipeId }: ChatPanelProps) {
     const text = input.trim();
     if (!text || status === "streaming") return;
     setInput("");
-    await send(text, sessionId);
+    await send(text);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -39,7 +39,12 @@ export function ChatPanel({ recipeId }: ChatPanelProps) {
   return (
     <div className="flex flex-col h-full gap-3">
       <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
-        {messages.length === 0 && (
+        {isLoadingHistory && (
+          <p className="text-sm text-muted-foreground text-center pt-8 animate-pulse">
+            Loading conversation history…
+          </p>
+        )}
+        {!isLoadingHistory && messages.length === 0 && (
           <p className="text-sm text-muted-foreground text-center pt-8">
             Ask me anything about your recipe.
           </p>

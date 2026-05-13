@@ -52,8 +52,10 @@ async def create_recipe(recipe: Recipe, db_path: str) -> str:
     recipe_id = recipe.get("id") or str(uuid.uuid4())
     data: Recipe = {**recipe, "id": recipe_id}
     async with aiosqlite.connect(db_path) as db:
+        # Upsert: if the row was pre-created by ensure_recipe, overwrite it.
         await db.execute(
-            "INSERT INTO recipes (id, json) VALUES (?, ?)",
+            "INSERT INTO recipes (id, json) VALUES (?, ?)"
+            " ON CONFLICT(id) DO UPDATE SET json = excluded.json",
             (recipe_id, json.dumps(data)),
         )
         await db.commit()
