@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { StatsBar } from "@/components/StatsBar";
 import { FermentablesTable } from "@/components/FermentablesTable";
 import { HopsTable } from "@/components/HopsTable";
@@ -19,17 +30,20 @@ import { ChatPanel } from "@/components/ChatPanel";
 import { BrewNotesPanel } from "@/components/BrewNotesPanel";
 import { SensoryProfileModal } from "@/components/SensoryProfileModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useRecipe, usePatchRecipe, useStyles } from "@/hooks/useRecipe";
+import { useRecipe, usePatchRecipe, useStyles, useDeleteRecipe } from "@/hooks/useRecipe";
 import type { Fermentable, Hop, Yeast, RecipePatch } from "@/types/recipe";
 
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const recipeId = id!;
+  const navigate = useNavigate();
 
   const { data: recipe, isLoading, error } = useRecipe(recipeId);
   const patch = usePatchRecipe(recipeId);
+  const deleteMutation = useDeleteRecipe();
   const { data: styles } = useStyles();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -49,6 +63,12 @@ export function RecipeDetailPage() {
     patch.mutate({ [field]: value });
   }
 
+  function handleDelete() {
+    deleteMutation.mutate(recipeId, {
+      onSuccess: () => navigate("/"),
+    });
+  }
+
   function handleFermentablesChange(fermentables: Fermentable[]) {
     patch.mutate({ fermentables });
   }
@@ -64,14 +84,45 @@ export function RecipeDetailPage() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-background flex flex-col">
-        <header className="border-b px-6 py-3 flex items-center justify-between">
+        <header className="border-b px-6 py-3 flex items-center justify-between gap-2">
           <Link to="/" className={buttonVariants({ variant: "ghost" })}>
             ← My Recipes
           </Link>
-          <h1 className="font-semibold truncate max-w-xs">{recipe.name}</h1>
-          <Button variant="outline" onClick={() => setProfileOpen(true)}>
-            Profile
-          </Button>
+          <h1 className="font-semibold truncate flex-1 text-center">
+            {recipe.name}
+          </h1>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setProfileOpen(true)}>
+              Profile
+            </Button>
+            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+              <DialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                <span className="sr-only">Delete recipe</span>
+              </DialogTrigger>
+              <DialogContent showCloseButton={false}>
+                <DialogHeader>
+                  <DialogTitle>Delete recipe?</DialogTitle>
+                  <DialogDescription>
+                    "{recipe.name}" will be permanently deleted. This cannot be
+                    undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <DialogClose render={<Button variant="outline" />}>
+                    Cancel
+                  </DialogClose>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={deleteMutation.isPending}
+                  >
+                    {deleteMutation.isPending ? "Deleting…" : "Delete"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </header>
 
         <div className="flex-1 flex overflow-hidden">

@@ -44,3 +44,7 @@ export async function getStyles(): Promise<Style[]> {
 export async function getSensoryProfile(id: string): Promise<SensoryProfile> {
   return apiFetch<SensoryProfile>(`/recipe/${id}/profile`);
 }
+
+export async function deleteRecipe(id: string): Promise<void> {
+  await apiFetch<void>(`/recipe/${id}`, { method: "DELETE" });
+}

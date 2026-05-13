@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import APIRouter
 from fastapi import HTTPException
+from fastapi import Response
 from langchain_core.messages import HumanMessage
 
 from src.agents.orchestrator import recipe_agent_context
@@ -16,6 +17,7 @@ from src.models.recipe import RecipeWithStats
 from src.models.recipe import SensoryProfile
 from src.models.recipe import Style
 from src.resources.recipe import create_recipe
+from src.resources.recipe import delete_recipe
 from src.resources.recipe import get_recipe
 from src.resources.recipe import list_recipes
 from src.resources.recipe import update_recipe
@@ -49,6 +51,14 @@ async def patch_recipe(recipe_id: str, patch: RecipePatch) -> RecipeWithStats:
     if updated is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
     return {**updated, "calculated": calculate_stats(updated)}
+
+
+@router.delete("/{recipe_id}", status_code=204)
+async def delete_recipe_by_id(recipe_id: str) -> Response:
+    deleted = await delete_recipe(recipe_id, settings.DB_PATH)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return Response(status_code=204)
 
 
 @router.get("s")
