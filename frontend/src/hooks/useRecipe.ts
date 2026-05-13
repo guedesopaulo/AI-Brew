@@ -4,6 +4,7 @@ import {
   getRecipes,
   patchRecipe,
   createRecipe,
+  cloneRecipe,
   deleteRecipe,
   getRecipeNotes,
   getStyles,
@@ -60,6 +61,16 @@ export function useStyles() {
     queryKey: ["styles"],
     queryFn: getStyles,
     staleTime: Infinity,
+  });
+}
+
+export function useCloneRecipe() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cloneRecipe(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["recipes"] });
+    },
   });
 }
 

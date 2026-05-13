@@ -16,6 +16,7 @@ from src.models.recipe import RecipePatch
 from src.models.recipe import RecipeWithStats
 from src.models.recipe import SensoryProfile
 from src.models.recipe import Style
+from src.resources.recipe import clone_recipe
 from src.resources.recipe import create_recipe
 from src.resources.recipe import delete_recipe
 from src.resources.recipe import get_recipe
@@ -51,6 +52,14 @@ async def patch_recipe(recipe_id: str, patch: RecipePatch) -> RecipeWithStats:
     if updated is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
     return {**updated, "calculated": calculate_stats(updated)}
+
+
+@router.post("/{recipe_id}/clone", status_code=201)
+async def clone_recipe_by_id(recipe_id: str) -> dict[str, str]:
+    new_id = await clone_recipe(recipe_id, settings.DB_PATH)
+    if new_id is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return {"id": new_id}
 
 
 @router.delete("/{recipe_id}", status_code=204)
