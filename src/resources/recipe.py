@@ -98,6 +98,14 @@ _REQUIRED_RECIPE_KEYS = {
 }
 
 
+async def delete_recipe(recipe_id: str, db_path: str) -> bool:
+    """Delete a recipe by id. Returns True if deleted, False if not found."""
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+        await db.commit()
+    return cursor.rowcount > 0
+
+
 async def list_recipes(db_path: str) -> list[Recipe]:
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(

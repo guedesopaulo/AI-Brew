@@ -4,6 +4,7 @@ import {
   getRecipes,
   patchRecipe,
   createRecipe,
+  deleteRecipe,
   getRecipeNotes,
   getStyles,
   getSensoryProfile,
@@ -59,6 +60,17 @@ export function useStyles() {
     queryKey: ["styles"],
     queryFn: getStyles,
     staleTime: Infinity,
+  });
+}
+
+export function useDeleteRecipe() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteRecipe(id),
+    onSuccess: (_data, id) => {
+      void queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      queryClient.removeQueries({ queryKey: ["recipe", id] });
+    },
   });
 }
 

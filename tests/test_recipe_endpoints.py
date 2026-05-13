@@ -273,6 +273,31 @@ def test_get_styles_contains_known_style(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
+# DELETE /recipe/{id}
+# ---------------------------------------------------------------------------
+
+
+def test_delete_recipe_returns_204(client: TestClient) -> None:
+    with patch(
+        "src.endpoints.recipe.delete_recipe", new_callable=AsyncMock
+    ) as mock_delete:
+        mock_delete.return_value = True
+        response = client.delete("/recipe/abc-123", headers=_auth())
+
+    assert response.status_code == 204
+
+
+def test_delete_recipe_not_found_returns_404(client: TestClient) -> None:
+    with patch(
+        "src.endpoints.recipe.delete_recipe", new_callable=AsyncMock
+    ) as mock_delete:
+        mock_delete.return_value = False
+        response = client.delete("/recipe/missing", headers=_auth())
+
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
 # GET /recipe/{id}/profile (existing tests follow)
 # ---------------------------------------------------------------------------
 

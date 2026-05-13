@@ -1,10 +1,13 @@
-"""Unit tests for src/resources/recipe.py — ensure_recipe + list_recipes."""
+"""Unit tests for src/resources/recipe.py — ensure_recipe
++ list_recipes + delete_recipe.
+"""
 
 import json
 
 import aiosqlite
 import pytest
 
+from src.resources.recipe import delete_recipe
 from src.resources.recipe import ensure_recipe
 from src.resources.recipe import get_recipe
 from src.resources.recipe import init_db
@@ -45,6 +48,20 @@ async def test_ensure_recipe_placeholder_has_valid_fields(db_path: str) -> None:
     assert recipe["hops"] == []
     assert recipe["yeast"]["attenuation_pct"] == 75.0
     assert recipe["batch_size_liters"] == 20.0
+
+
+@pytest.mark.anyio
+async def test_delete_recipe_removes_row(db_path: str) -> None:
+    await ensure_recipe("del-1", db_path)
+    result = await delete_recipe("del-1", db_path)
+    assert result is True
+    assert await get_recipe("del-1", db_path) is None
+
+
+@pytest.mark.anyio
+async def test_delete_recipe_returns_false_when_not_found(db_path: str) -> None:
+    result = await delete_recipe("nonexistent", db_path)
+    assert result is False
 
 
 @pytest.mark.anyio
