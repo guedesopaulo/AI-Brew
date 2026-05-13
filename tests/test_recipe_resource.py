@@ -1,10 +1,14 @@
-"""Unit tests for src/resources/recipe.py — ensure_recipe."""
+"""Unit tests for src/resources/recipe.py — ensure_recipe + list_recipes."""
 
+import json
+
+import aiosqlite
 import pytest
 
 from src.resources.recipe import ensure_recipe
 from src.resources.recipe import get_recipe
 from src.resources.recipe import init_db
+from src.resources.recipe import list_recipes
 
 
 @pytest.fixture
@@ -41,3 +45,20 @@ async def test_ensure_recipe_placeholder_has_valid_fields(db_path: str) -> None:
     assert recipe["hops"] == []
     assert recipe["yeast"]["attenuation_pct"] == 75.0
     assert recipe["batch_size_liters"] == 20.0
+
+
+@pytest.mark.anyio
+async def test_list_recipes_skips_rows_missing_required_keys(db_path: str) -> None:
+    # Insert one valid and one stub (id-only) row directly
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(
+            "INSERT INTO recipes (id, json) VALUES (?, ?)",
+            ("stub-only", json.dumps({"id": "stub-only"})),
+        )
+        await db.commit()
+    await ensure_recipe("valid-1", db_path)
+
+    recipes = await list_recipes(db_path)
+    ids = [r["id"] for r in recipes]
+    assert "valid-1" in ids
+    assert "stub-only" not in ids

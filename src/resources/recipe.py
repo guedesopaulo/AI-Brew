@@ -4,6 +4,7 @@ import json
 import uuid
 
 import aiosqlite
+from loguru import logger
 
 from src.models.recipe import Recipe
 from src.models.recipe import RecipePatch
@@ -86,10 +87,31 @@ async def update_recipe(
     return updated
 
 
+_REQUIRED_RECIPE_KEYS = {
+    "id",
+    "name",
+    "style",
+    "batch_size_liters",
+    "fermentables",
+    "hops",
+    "yeast",
+}
+
+
 async def list_recipes(db_path: str) -> list[Recipe]:
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(
             "SELECT json FROM recipes ORDER BY created_at DESC"
         ) as cursor:
             rows = await cursor.fetchall()
-    return [json.loads(row[0]) for row in rows]
+    results = []
+    for row in rows:
+        data = json.loads(row[0])
+        missing = _REQUIRED_RECIPE_KEYS - data.keys()
+        if missing:
+            logger.warning(
+                "skipping recipe row missing keys: {} (id={})", missing, data.get("id")
+            )
+            continue
+        results.append(data)
+    return results

@@ -180,3 +180,8 @@ brew_notes/
 *.db
 *.db-shm
 *.db-wal
+
+# Frontend
+frontend/.env.local
+frontend/dist/
+frontend/node_modules/

@@ -61,3 +61,23 @@ class SensoryProfile(TypedDict):
     flavor: str
     mouthfeel: str
     appearance: str
+
+
+class BrewNotes(TypedDict):
+    content: str
+
+
+class Style(TypedDict):
+    name: str
+    category: str
+    og_min: float
+    og_max: float
+    fg_min: float
+    fg_max: float
+    ibu_min: float
+    ibu_max: float
+    srm_min: float
+    srm_max: float
+    abv_min: float
+    abv_max: float
+    description: str
