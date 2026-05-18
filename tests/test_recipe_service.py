@@ -59,9 +59,9 @@ AMERICAN_ALE_YEAST: Yeast = {
 @pytest.mark.parametrize(
     ("fermentables", "batch_liters", "expected"),
     [
-        ([PALE_MALT], 20.0, 1.0618),
-        ([PALE_MALT, CRYSTAL_60], 20.0, 1.0686),
-        ([PALE_MALT], 40.0, 1.0309),
+        ([PALE_MALT], 20.0, 1.0463),
+        ([PALE_MALT, CRYSTAL_60], 20.0, 1.0515),
+        ([PALE_MALT], 40.0, 1.0232),
     ],
 )
 def test_calc_og(
@@ -73,6 +73,12 @@ def test_calc_og(
 
 def test_calc_og_empty_fermentables() -> None:
     assert calc_og([], 20.0) == 1.0
+
+
+def test_calc_og_higher_efficiency_raises_og() -> None:
+    og_75 = calc_og([PALE_MALT], 20.0, efficiency_pct=75.0)
+    og_80 = calc_og([PALE_MALT], 20.0, efficiency_pct=80.0)
+    assert og_80 > og_75
 
 
 # ---------------------------------------------------------------------------
@@ -200,6 +206,13 @@ def test_calculate_stats_og_fg_abv_consistent() -> None:
 def test_calculate_stats_ibu_positive() -> None:
     stats = calculate_stats(SIMPLE_RECIPE)
     assert stats["ibu"] > 0
+
+
+def test_calculate_stats_respects_custom_efficiency() -> None:
+    stats_75 = calculate_stats(SIMPLE_RECIPE, efficiency_pct=75.0)
+    stats_68 = calculate_stats(SIMPLE_RECIPE, efficiency_pct=68.0)
+    assert stats_68["og"] < stats_75["og"]
+    assert stats_68["abv"] < stats_75["abv"]
 
 
 def test_calculate_stats_srm_positive() -> None:

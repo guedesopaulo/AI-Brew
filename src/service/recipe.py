@@ -11,13 +11,18 @@ _KG_TO_LBS = 2.20462
 _G_TO_OZ = 0.035274
 _LITERS_TO_GALLONS = 0.264172
 _EBC_TO_LOVIBOND = 0.508  # Lovibond = EBC * 0.508 (inverse of EBC = L * 1.97)
+DEFAULT_EFFICIENCY_PCT = 75.0
 
 
-def calc_og(fermentables: list[Fermentable], batch_liters: float) -> float:
+def calc_og(
+    fermentables: list[Fermentable],
+    batch_liters: float,
+    efficiency_pct: float = DEFAULT_EFFICIENCY_PCT,
+) -> float:
     """Original gravity via malt extract (PPG) formula."""
     batch_gallons = batch_liters * _LITERS_TO_GALLONS
     total_points = sum(f["amount_kg"] * _KG_TO_LBS * f["ppg"] for f in fermentables)
-    return round(1 + total_points / batch_gallons / 1000, 4)
+    return round(1 + total_points * (efficiency_pct / 100) / batch_gallons / 1000, 4)
 
 
 def calc_ibu_tinseth(hops: list[Hop], og: float, batch_liters: float) -> float:
@@ -58,9 +63,11 @@ def calc_abv(og: float, fg: float) -> float:
     return round((og - fg) * 131.25, 2)
 
 
-def calculate_stats(recipe: Recipe) -> CalculatedStats:
+def calculate_stats(
+    recipe: Recipe, efficiency_pct: float = DEFAULT_EFFICIENCY_PCT
+) -> CalculatedStats:
     """Derive all calculated stats from a recipe."""
-    og = calc_og(recipe["fermentables"], recipe["batch_size_liters"])
+    og = calc_og(recipe["fermentables"], recipe["batch_size_liters"], efficiency_pct)
     fg = calc_fg(og, recipe["yeast"]["attenuation_pct"])
     return {
         "og": og,

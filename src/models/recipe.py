@@ -1,5 +1,6 @@
 """Recipe domain TypedDicts."""
 
+from typing import NotRequired
 from typing import TypedDict
 
 
@@ -41,6 +42,7 @@ class Recipe(TypedDict):
     fermentables: list[Fermentable]
     hops: list[Hop]
     yeast: Yeast
+    equipment_id: NotRequired[str]
 
 
 class RecipePatch(TypedDict, total=False):
@@ -50,6 +52,7 @@ class RecipePatch(TypedDict, total=False):
     fermentables: list[Fermentable]
     hops: list[Hop]
     yeast: Yeast
+    equipment_id: str
 
 
 class RecipeWithStats(Recipe):

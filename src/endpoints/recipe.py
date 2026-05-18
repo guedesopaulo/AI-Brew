@@ -13,18 +13,22 @@ from src.agents.orchestrator import get_checkpointer
 from src.agents.orchestrator import recipe_agent_context
 from src.config import settings
 from src.models.chat import HistoryMessage
+from src.models.equipment import EquipmentProfile
 from src.models.recipe import BrewNotes
 from src.models.recipe import Recipe
 from src.models.recipe import RecipePatch
 from src.models.recipe import RecipeWithStats
 from src.models.recipe import SensoryProfile
 from src.models.recipe import Style
+from src.resources.equipment import get_equipment_profile
+from src.resources.equipment import get_equipment_profiles_by_ids
 from src.resources.recipe import clone_recipe
 from src.resources.recipe import create_recipe
 from src.resources.recipe import delete_recipe
 from src.resources.recipe import get_recipe
 from src.resources.recipe import list_recipes
 from src.resources.recipe import update_recipe
+from src.service.recipe import DEFAULT_EFFICIENCY_PCT
 from src.service.recipe import calculate_stats
 
 router = APIRouter(prefix="/recipe", tags=["recipe"])
@@ -33,6 +37,17 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _STYLES: list[Style] = json.loads(
     (_REPO_ROOT / "src" / "data" / "styles.json").read_text()
 )
+
+
+async def _resolve_efficiency(recipe: Recipe) -> float:
+    """Return brewhouse efficiency from the recipe's linked equipment profile."""
+    if equip_id := recipe.get("equipment_id"):
+        profile: EquipmentProfile | None = await get_equipment_profile(
+            equip_id, settings.DB_PATH
+        )
+        if profile:
+            return profile["brewhouse_efficiency_pct"]
+    return DEFAULT_EFFICIENCY_PCT
 
 
 @router.post("", status_code=201)
@@ -46,7 +61,8 @@ async def get_recipe_by_id(recipe_id: str) -> RecipeWithStats:
     recipe = await get_recipe(recipe_id, settings.DB_PATH)
     if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    return {**recipe, "calculated": calculate_stats(recipe)}
+    eff = await _resolve_efficiency(recipe)
+    return {**recipe, "calculated": calculate_stats(recipe, eff)}
 
 
 @router.patch("/{recipe_id}")
@@ -54,7 +70,8 @@ async def patch_recipe(recipe_id: str, patch: RecipePatch) -> RecipeWithStats:
     updated = await update_recipe(recipe_id, patch, settings.DB_PATH)
     if updated is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    return {**updated, "calculated": calculate_stats(updated)}
+    eff = await _resolve_efficiency(updated)
+    return {**updated, "calculated": calculate_stats(updated, eff)}
 
 
 @router.post("/{recipe_id}/clone", status_code=201)
@@ -76,7 +93,16 @@ async def delete_recipe_by_id(recipe_id: str) -> Response:
 @router.get("s")
 async def get_recipes() -> list[RecipeWithStats]:
     recipes = await list_recipes(settings.DB_PATH)
-    return [{**r, "calculated": calculate_stats(r)} for r in recipes]
+    # Batch-fetch equipment profiles to avoid N+1 queries.
+    equip_ids = [r["equipment_id"] for r in recipes if r.get("equipment_id")]
+    profiles = await get_equipment_profiles_by_ids(equip_ids, settings.DB_PATH)
+    result: list[RecipeWithStats] = []
+    for r in recipes:
+        eff = DEFAULT_EFFICIENCY_PCT
+        if (eid := r.get("equipment_id")) and eid in profiles:
+            eff = profiles[eid]["brewhouse_efficiency_pct"]
+        result.append({**r, "calculated": calculate_stats(r, eff)})
+    return result
 
 
 @router.get("/{recipe_id}/notes")
@@ -126,7 +152,8 @@ async def get_recipe_profile(recipe_id: str) -> SensoryProfile:
     recipe = await get_recipe(recipe_id, settings.DB_PATH)
     if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    stats = calculate_stats(recipe)
+    eff = await _resolve_efficiency(recipe)
+    stats = calculate_stats(recipe, eff)
     prompt = (
         f"Generate a sensory profile for recipe {recipe_id}. "
         f"Fermentables: {recipe['fermentables']}. "

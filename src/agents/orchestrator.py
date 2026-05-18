@@ -31,9 +31,15 @@ plan. Each step must reference a specific MCP tool call. Only proceed after the
 plan is complete. Never skip planning.
 
 The MCP tools available to you are:
+Recipe tools:
 - patch_recipe_recipe       — set or update recipe fields (always use this)
 - get_recipe_by_id_recipe   — read a recipe with calculated stats
 - get_recipes_recipes_get   — list all recipes
+Equipment tools:
+- post_equipment_equipment_post      — create a new equipment profile
+- get_equipment_by_id_equipment      — read an equipment profile by id
+- patch_equipment_equipment          — update an equipment profile
+- list_equipment_equipments_get      — list all equipment profiles
 
 For hops, the use field MUST be exactly one of: boil, whirlpool, dry-hop.
 Never use "aroma", "late", "flameout", or any other value.
@@ -43,6 +49,26 @@ This recipe already exists in the database (a placeholder row is pre-created
 before you start). Use patch_recipe_recipe to set or update any fields. Never
 call post_recipe_recipe_post for this recipe — it already has a row and a second
 INSERT will fail with a conflict error.
+
+EQUIPMENT PROFILES:
+The OG/ABV stats returned by get_recipe_by_id_recipe are calculated using the
+brewhouse efficiency from the recipe's linked equipment profile (default 75% if
+none is set). Efficiency varies by setup: extract = ~100%, BIAB = 65-75%,
+3-vessel = 70-80%.
+
+At the start of the FIRST message in a session:
+1. Call get_recipe_by_id_recipe to read the current recipe.
+2. Call list_equipment_equipments_get to see existing profiles.
+3. If no equipment profile is linked to this recipe (recipe.equipment_id is
+   absent or null), ask the user one question: "What brewing method do you use?
+   (e.g. BIAB, 3-vessel, extract, partial mash)" and estimate their efficiency.
+   Then create a profile with post_equipment_equipment_post and link it to the
+   recipe via patch_recipe_recipe with {{"equipment_id": "<new-id>"}}.
+4. If a profile is already linked, proceed with the recipe work.
+
+For subsequent messages, check recipe.equipment_id. If set, use the linked
+profile's brewhouse_efficiency_pct in your grain calculation formula.
+If not set, use 75% and remind the user they can set up an equipment profile.
 
 At the start of every user message that involves discussing or modifying the
 recipe, call get_recipe_by_id_recipe FIRST to read the current state from the
@@ -57,6 +83,26 @@ etc.) and why. Wait for the user to reply.
   proceed with the patch call.
 - If the user asks for changes or says no: revise your plan and ask again.
 Never call patch_recipe_recipe without first getting explicit user agreement.
+
+ABV TO OG CALCULATION -- when the user gives a target ABV, do this FIRST:
+  target_OG = 1 + (target_ABV / (yeast_attenuation_pct / 100) / 131.25)
+  Example: target 3.4% ABV, S-04 attenuation 73%:
+    target_OG = 1 + (3.4 / 0.73 / 131.25) = 1.0355
+  NEVER use the style OG range as the target when the user specifies an ABV.
+  Always compute the required OG from the user's ABV request first, then use
+  that OG in the grain calculation below.
+
+GRAIN CALCULATION -- use this formula BEFORE proposing any grain amounts:
+  efficiency = recipe's equipment profile brewhouse_efficiency_pct / 100
+               (use 0.75 if no profile is linked)
+  grain_kg = (target_OG_points * batch_liters * 0.264) / (ppg * 2.205 * efficiency)
+  where target_OG_points = (target_OG - 1) * 1000
+  Example at 75% efficiency, OG 1.048, 20 L, Pilsner malt (ppg 37):
+    grain_kg = (48 * 20 * 0.264) / (37 * 2.205 * 0.75) ~= 4.1 kg total grain
+  Example at 70% efficiency, OG 1.0355, 40 L, Maris Otter (ppg 38):
+    grain_kg = (35.5 * 40 * 0.264) / (38 * 2.205 * 0.70) ~= 7.1 kg total grain
+  When using multiple fermentables, distribute the total kg across them by
+  percentage (e.g. 90% base malt + 10% specialty malt).
 
 After EVERY patch_recipe_recipe call,
 you MUST immediately call get_recipe_by_id_recipe and check that:
@@ -91,16 +137,16 @@ CRITICAL OUTPUT RULES:
 
 # Falls back to MemorySaver so tests never need a real DB.
 # main.py lifespan replaces this with AsyncSqliteSaver at startup.
-_checkpointer: BaseCheckpointSaver = MemorySaver()
+_checkpointer: BaseCheckpointSaver[Any] = MemorySaver()
 
 
-def set_checkpointer(checkpointer: BaseCheckpointSaver) -> None:
+def set_checkpointer(checkpointer: BaseCheckpointSaver[Any]) -> None:
     """Swap the module-level checkpointer (called once from lifespan)."""
     global _checkpointer
     _checkpointer = checkpointer
 
 
-def get_checkpointer() -> BaseCheckpointSaver:
+def get_checkpointer() -> BaseCheckpointSaver[Any]:
     """Return the active checkpointer (MemorySaver or AsyncSqliteSaver)."""
     return _checkpointer
 

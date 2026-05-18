@@ -16,9 +16,11 @@ from src.agents.orchestrator import set_checkpointer
 from src.config import settings
 from src.endpoints.chat import router as chat_router
 from src.endpoints.echo import router as echo_router
+from src.endpoints.equipment import router as equipment_router
 from src.endpoints.recipe import router as recipe_router
 from src.exception_handlers import register_exception_handlers
 from src.middleware import BearerTokenMiddleware
+from src.resources.equipment import init_equipment_db
 from src.resources.recipe import init_db
 
 
@@ -26,6 +28,7 @@ from src.resources.recipe import init_db
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     _ = app
     await init_db(settings.DB_PATH)
+    await init_equipment_db(settings.DB_PATH)
     os.makedirs("brew_notes", exist_ok=True)
     async with AsyncSqliteSaver.from_conn_string(settings.CHECKPOINT_DB_PATH) as cp:
         set_checkpointer(cp)
@@ -50,6 +53,7 @@ register_exception_handlers(app)
 app.add_middleware(BearerTokenMiddleware)
 app.include_router(echo_router)
 app.include_router(recipe_router)
+app.include_router(equipment_router)
 app.include_router(chat_router)
 
 # MCP: auto-generate tools from all FastAPI routes

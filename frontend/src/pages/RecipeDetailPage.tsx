@@ -31,6 +31,7 @@ import { BrewNotesPanel } from "@/components/BrewNotesPanel";
 import { SensoryProfileModal } from "@/components/SensoryProfileModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useRecipe, usePatchRecipe, useStyles, useDeleteRecipe } from "@/hooks/useRecipe";
+import { EquipmentSelector } from "@/components/EquipmentSelector";
 import type { Fermentable, Hop, Yeast, RecipePatch } from "@/types/recipe";
 
 export function RecipeDetailPage() {
@@ -169,6 +170,13 @@ export function RecipeDetailPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="col-span-2">
+                <EquipmentSelector
+                  recipeId={recipeId}
+                  currentEquipmentId={recipe.equipment_id}
+                  disabled={patch.isPending}
+                />
               </div>
             </div>
 

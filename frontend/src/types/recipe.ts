@@ -36,6 +36,7 @@ export interface Recipe {
   fermentables: Fermentable[];
   hops: Hop[];
   yeast: Yeast;
+  equipment_id?: string;
 }
 
 export interface RecipeWithStats extends Recipe {
@@ -49,6 +50,7 @@ export interface RecipePatch {
   fermentables?: Fermentable[];
   hops?: Hop[];
   yeast?: Yeast;
+  equipment_id?: string;
 }
 
 export interface BrewNotes {
