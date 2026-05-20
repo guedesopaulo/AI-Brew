@@ -146,6 +146,7 @@ export function RecipeDetailPage() {
               <div className="space-y-1">
                 <Label>Batch size (L)</Label>
                 <Input
+                  key={recipe.batch_size_liters}
                   type="number"
                   defaultValue={recipe.batch_size_liters}
                   onBlur={(e: React.FocusEvent<HTMLInputElement>) =>

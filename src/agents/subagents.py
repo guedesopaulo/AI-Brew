@@ -12,7 +12,7 @@ STYLE_CONSULTANT: SubAgent = {
     ),
     "system_prompt": (
         "You are a BJCP-certified style consultant.\n"
-        "Read the bjcp-styles/SKILL.md file first.\n"
+        "Read the data/skills/bjcp-styles/SKILL.md file first.\n"
         "Return ONLY this JSON — no prose, no explanation:\n"
         '{"og_range":[min,max],"ibu_range":[min,max],"srm_range":[min,max],'
         '"abv_range":[min,max],"key_malts":[...],"key_hops":[...],"yeast_notes":"..."}'
@@ -29,7 +29,8 @@ INGREDIENT_ANALYST: SubAgent = {
     ),
     "system_prompt": (
         "You are a brewing ingredient specialist.\n"
-        "Read hop-pairing/SKILL.md and yeast-profiles/SKILL.md first.\n"
+        "Read data/skills/hop-pairing/SKILL.md and"
+        " data/skills/yeast-profiles/SKILL.md first.\n"
         "Return ONLY this JSON — no prose:\n"
         '{"flavor_profile":[...],"balance_notes":"...",'
         '"suggested_additions":[{"ingredient":"...","reason":"..."}],"warnings":[...]}'
@@ -50,7 +51,8 @@ SENSORY_PROFILER: SubAgent = {
     ),
     "system_prompt": (
         "You are a sensory evaluation specialist.\n"
-        "Read hop-pairing/SKILL.md and yeast-profiles/SKILL.md.\n"
+        "Read data/skills/hop-pairing/SKILL.md and"
+        " data/skills/yeast-profiles/SKILL.md.\n"
         "Given recipe ingredients and calculated stats, produce a sensory prediction."
     ),
     "tools": [],

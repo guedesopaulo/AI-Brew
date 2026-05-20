@@ -3,6 +3,7 @@
 import pytest
 
 from src.models.recipe import Fermentable
+from src.models.recipe import GrainInput
 from src.models.recipe import Hop
 from src.models.recipe import Recipe
 from src.models.recipe import Yeast
@@ -11,6 +12,7 @@ from src.service.recipe import calc_fg
 from src.service.recipe import calc_ibu_tinseth
 from src.service.recipe import calc_og
 from src.service.recipe import calc_srm_morey
+from src.service.recipe import calculate_grain_bill
 from src.service.recipe import calculate_stats
 
 # ---------------------------------------------------------------------------
@@ -218,3 +220,80 @@ def test_calculate_stats_respects_custom_efficiency() -> None:
 def test_calculate_stats_srm_positive() -> None:
     stats = calculate_stats(SIMPLE_RECIPE)
     assert stats["srm"] > 0
+
+
+# ---------------------------------------------------------------------------
+# calculate_grain_bill
+# ---------------------------------------------------------------------------
+
+_GUINNESS_GRAIN_INPUTS: list[GrainInput] = [
+    {"name": "Pale Malt", "ppg": 37, "pct": 91.0},
+    {"name": "Roasted Barley", "ppg": 25, "pct": 5.0},
+    {"name": "Black Malt", "ppg": 25, "pct": 4.0},
+]
+
+
+def test_calculate_grain_bill_guinness_target_og() -> None:
+    # 4.2% ABV, 78% attenuation → OG = 1 + 4.2 / (0.78 * 131.25) = 1.0410
+    result = calculate_grain_bill(
+        target_abv=4.2,
+        batch_liters=40.0,
+        efficiency_pct=70.0,
+        yeast_attenuation_pct=78.0,
+        grain_inputs=_GUINNESS_GRAIN_INPUTS,
+    )
+    assert abs(result["target_og"] - 1.041) < 0.001
+    assert abs(result["target_og_points"] - 41.0) < 0.5
+
+
+def test_calculate_grain_bill_guinness_total_grain() -> None:
+    result = calculate_grain_bill(
+        target_abv=4.2,
+        batch_liters=40.0,
+        efficiency_pct=70.0,
+        yeast_attenuation_pct=78.0,
+        grain_inputs=_GUINNESS_GRAIN_INPUTS,
+    )
+    # Verify grain bill rounds back to the correct OG via calc_og
+    fermentables: list[Fermentable] = [
+        {
+            "name": g["name"],
+            "amount_kg": g["amount_kg"],
+            "color_ebc": 5.0,
+            "ppg": gi["ppg"],
+        }
+        for g, gi in zip(result["fermentables"], _GUINNESS_GRAIN_INPUTS, strict=True)
+    ]
+    computed_og = calc_og(fermentables, batch_liters=40.0, efficiency_pct=70.0)
+    assert abs(computed_og - result["target_og"]) < 0.002
+
+
+def test_calculate_grain_bill_pcts_sum_reflected_in_amounts() -> None:
+    result = calculate_grain_bill(
+        target_abv=4.2,
+        batch_liters=40.0,
+        efficiency_pct=70.0,
+        yeast_attenuation_pct=78.0,
+        grain_inputs=_GUINNESS_GRAIN_INPUTS,
+    )
+    total = sum(f["amount_kg"] for f in result["fermentables"])
+    assert abs(total - result["total_grain_kg"]) < 0.1
+
+
+def test_calculate_grain_bill_higher_efficiency_less_grain() -> None:
+    single_malt: list[GrainInput] = [{"name": "Pale Malt", "ppg": 37, "pct": 100.0}]
+    low = calculate_grain_bill(
+        target_abv=4.2,
+        batch_liters=20.0,
+        efficiency_pct=65.0,
+        yeast_attenuation_pct=75.0,
+        grain_inputs=single_malt,
+    )
+    high = calculate_grain_bill(
+        target_abv=4.2,
+        batch_liters=20.0,
+        efficiency_pct=80.0,
+        yeast_attenuation_pct=75.0,
+        grain_inputs=single_malt,
+    )
+    assert low["total_grain_kg"] > high["total_grain_kg"]

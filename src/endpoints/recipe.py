@@ -15,6 +15,8 @@ from src.config import settings
 from src.models.chat import HistoryMessage
 from src.models.equipment import EquipmentProfile
 from src.models.recipe import BrewNotes
+from src.models.recipe import GrainBillRequest
+from src.models.recipe import GrainBillResult
 from src.models.recipe import Recipe
 from src.models.recipe import RecipePatch
 from src.models.recipe import RecipeWithStats
@@ -29,6 +31,7 @@ from src.resources.recipe import get_recipe
 from src.resources.recipe import list_recipes
 from src.resources.recipe import update_recipe
 from src.service.recipe import DEFAULT_EFFICIENCY_PCT
+from src.service.recipe import calculate_grain_bill
 from src.service.recipe import calculate_stats
 
 router = APIRouter(prefix="/recipe", tags=["recipe"])
@@ -48,6 +51,18 @@ async def _resolve_efficiency(recipe: Recipe) -> float:
         if profile:
             return profile["brewhouse_efficiency_pct"]
     return DEFAULT_EFFICIENCY_PCT
+
+
+@router.post("/grain-bill", operation_id="calculate_grain_bill")
+async def calculate_grain_bill_endpoint(body: GrainBillRequest) -> GrainBillResult:
+    """Calculate exact grain amounts for a target ABV."""
+    return calculate_grain_bill(
+        target_abv=body["target_abv"],
+        batch_liters=body["batch_liters"],
+        efficiency_pct=body["efficiency_pct"],
+        yeast_attenuation_pct=body["yeast_attenuation_pct"],
+        grain_inputs=body["grain_inputs"],
+    )
 
 
 @router.post("", status_code=201)

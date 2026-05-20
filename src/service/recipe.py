@@ -4,6 +4,9 @@ import math
 
 from src.models.recipe import CalculatedStats
 from src.models.recipe import Fermentable
+from src.models.recipe import GrainBillResult
+from src.models.recipe import GrainInput
+from src.models.recipe import GrainOutput
 from src.models.recipe import Hop
 from src.models.recipe import Recipe
 
@@ -61,6 +64,38 @@ def calc_fg(og: float, attenuation_pct: float) -> float:
 def calc_abv(og: float, fg: float) -> float:
     """Alcohol by volume (%)."""
     return round((og - fg) * 131.25, 2)
+
+
+def calculate_grain_bill(
+    target_abv: float,
+    batch_liters: float,
+    efficiency_pct: float,
+    yeast_attenuation_pct: float,
+    grain_inputs: list[GrainInput],
+) -> GrainBillResult:
+    """Return exact grain amounts needed to hit a target ABV.
+
+    Offloads arithmetic from the LLM to prevent order-of-operations errors.
+    """
+    attenuation = yeast_attenuation_pct / 100
+    target_og = 1 + target_abv / (attenuation * 131.25)
+    target_og_points = (target_og - 1) * 1000
+    weighted_ppg = sum(g["ppg"] * g["pct"] / 100 for g in grain_inputs)
+    batch_gallons = batch_liters * _LITERS_TO_GALLONS
+    efficiency = efficiency_pct / 100
+    total_grain_kg = (
+        target_og_points * batch_gallons / (weighted_ppg * _KG_TO_LBS * efficiency)
+    )
+    fermentables: list[GrainOutput] = [
+        {"name": g["name"], "amount_kg": round(total_grain_kg * g["pct"] / 100, 2)}
+        for g in grain_inputs
+    ]
+    return {
+        "target_og": round(target_og, 4),
+        "target_og_points": round(target_og_points, 1),
+        "total_grain_kg": round(total_grain_kg, 2),
+        "fermentables": fermentables,
+    }
 
 
 def calculate_stats(

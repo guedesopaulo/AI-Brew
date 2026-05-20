@@ -30,7 +30,11 @@ export function EquipmentSelector({
 
   async function handleSelect(value: string) {
     const equipmentId = value === "none" ? undefined : value;
-    await patchRecipe(recipeId, { equipment_id: equipmentId });
+    const profile = profiles.find((p) => p.id === value);
+    await patchRecipe(recipeId, {
+      equipment_id: equipmentId,
+      ...(profile && { batch_size_liters: profile.batch_size_liters }),
+    });
     void queryClient.invalidateQueries({ queryKey: ["recipe", recipeId] });
     void queryClient.invalidateQueries({ queryKey: ["recipes"] });
   }

@@ -84,3 +84,29 @@ class Style(TypedDict):
     abv_min: float
     abv_max: float
     description: str
+
+
+class GrainInput(TypedDict):
+    name: str
+    ppg: int
+    pct: float  # share of total grain bill; all pct values must sum to 100
+
+
+class GrainOutput(TypedDict):
+    name: str
+    amount_kg: float
+
+
+class GrainBillRequest(TypedDict):
+    target_abv: float
+    batch_liters: float
+    efficiency_pct: float
+    yeast_attenuation_pct: float
+    grain_inputs: list[GrainInput]
+
+
+class GrainBillResult(TypedDict):
+    target_og: float
+    target_og_points: float
+    total_grain_kg: float
+    fermentables: list[GrainOutput]

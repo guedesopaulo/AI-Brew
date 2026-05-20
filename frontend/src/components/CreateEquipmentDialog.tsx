@@ -37,7 +37,10 @@ export function CreateEquipmentDialog({
 
   async function handleCreate() {
     const result = await createEquipment.mutateAsync(form);
-    await patchRecipe(recipeId, { equipment_id: result.id });
+    await patchRecipe(recipeId, {
+      equipment_id: result.id,
+      batch_size_liters: form.batch_size_liters,
+    });
     void queryClient.invalidateQueries({ queryKey: ["recipe", recipeId] });
     void queryClient.invalidateQueries({ queryKey: ["recipes"] });
     onOpenChange(false);
