@@ -8,6 +8,9 @@ from src.models.recipe import GrainBillResult
 from src.models.recipe import GrainInput
 from src.models.recipe import GrainOutput
 from src.models.recipe import Hop
+from src.models.recipe import HopAdditionInput
+from src.models.recipe import HopAdditionOutput
+from src.models.recipe import HopScheduleResult
 from src.models.recipe import Recipe
 
 _KG_TO_LBS = 2.20462
@@ -96,6 +99,69 @@ def calculate_grain_bill(
         "total_grain_kg": round(total_grain_kg, 2),
         "fermentables": fermentables,
     }
+
+
+def calculate_hop_schedule(
+    target_ibu: float,
+    og: float,
+    batch_liters: float,
+    hop_inputs: list[HopAdditionInput],
+) -> HopScheduleResult:
+    """Return exact gram amounts for a target IBU using inverse Tinseth.
+
+    Boil hops: amount computed via inverse Tinseth from ibu_pct share.
+    Non-boil hops: pass through with provided amount_g (default 20 g).
+    total_ibu is verified by running forward Tinseth on the result.
+    """
+    batch_gallons = batch_liters * _LITERS_TO_GALLONS
+    bigness = 1.65 * (0.000125 ** (og - 1))
+    hops_out: list[HopAdditionOutput] = []
+    for h in hop_inputs:
+        if h["use"] == "boil":
+            boil_factor = (1 - math.exp(-0.04 * h["time_min"])) / 4.15
+            utilization = bigness * boil_factor
+            if utilization == 0 or h["alpha_pct"] == 0:
+                raise ValueError(
+                    f"Hop '{h['name']}': time_min > 0 and alpha_pct > 0 "
+                    "required for boil additions"
+                )
+            ibu_share = target_ibu * h["ibu_pct"] / 100
+            amount_g = (
+                ibu_share
+                * batch_gallons
+                / (utilization * h["alpha_pct"] * 74.89 * _G_TO_OZ)
+            )
+            hops_out.append(
+                {
+                    "name": h["name"],
+                    "amount_g": round(amount_g, 1),
+                    "alpha_pct": h["alpha_pct"],
+                    "time_min": h["time_min"],
+                    "use": "boil",
+                }
+            )
+        else:
+            hops_out.append(
+                {
+                    "name": h["name"],
+                    "amount_g": h.get("amount_g", 20.0),
+                    "alpha_pct": h["alpha_pct"],
+                    "time_min": h["time_min"],
+                    "use": h["use"],
+                }
+            )
+    hop_list: list[Hop] = [
+        {
+            "name": h["name"],
+            "amount_g": h["amount_g"],
+            "alpha_pct": h["alpha_pct"],
+            "time_min": h["time_min"],
+            "use": h["use"],
+        }
+        for h in hops_out
+    ]
+    total_ibu = calc_ibu_tinseth(hop_list, og=og, batch_liters=batch_liters)
+    return {"total_ibu": total_ibu, "hops": hops_out}
 
 
 def calculate_stats(

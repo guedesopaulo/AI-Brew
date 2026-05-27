@@ -110,3 +110,32 @@ class GrainBillResult(TypedDict):
     target_og_points: float
     total_grain_kg: float
     fermentables: list[GrainOutput]
+
+
+class HopAdditionInput(TypedDict):
+    name: str
+    alpha_pct: float
+    time_min: int
+    use: str  # "boil" | "whirlpool" | "dry-hop"
+    ibu_pct: float  # share of total IBU; sum to 100 across boil hops; 0 for non-boil
+    amount_g: NotRequired[float]  # non-boil hops only; boil hops use inverse Tinseth
+
+
+class HopAdditionOutput(TypedDict):
+    name: str
+    amount_g: float
+    alpha_pct: float
+    time_min: int
+    use: str
+
+
+class HopAdditionRequest(TypedDict):
+    target_ibu: float
+    og: float
+    batch_liters: float
+    hop_inputs: list[HopAdditionInput]
+
+
+class HopScheduleResult(TypedDict):
+    total_ibu: float
+    hops: list[HopAdditionOutput]

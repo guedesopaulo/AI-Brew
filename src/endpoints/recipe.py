@@ -17,6 +17,8 @@ from src.models.equipment import EquipmentProfile
 from src.models.recipe import BrewNotes
 from src.models.recipe import GrainBillRequest
 from src.models.recipe import GrainBillResult
+from src.models.recipe import HopAdditionRequest
+from src.models.recipe import HopScheduleResult
 from src.models.recipe import Recipe
 from src.models.recipe import RecipePatch
 from src.models.recipe import RecipeWithStats
@@ -32,6 +34,7 @@ from src.resources.recipe import list_recipes
 from src.resources.recipe import update_recipe
 from src.service.recipe import DEFAULT_EFFICIENCY_PCT
 from src.service.recipe import calculate_grain_bill
+from src.service.recipe import calculate_hop_schedule
 from src.service.recipe import calculate_stats
 
 router = APIRouter(prefix="/recipe", tags=["recipe"])
@@ -62,6 +65,19 @@ async def calculate_grain_bill_endpoint(body: GrainBillRequest) -> GrainBillResu
         efficiency_pct=body["efficiency_pct"],
         yeast_attenuation_pct=body["yeast_attenuation_pct"],
         grain_inputs=body["grain_inputs"],
+    )
+
+
+@router.post("/hop-addition", operation_id="calculate_hop_addition")
+async def calculate_hop_addition_endpoint(
+    body: HopAdditionRequest,
+) -> HopScheduleResult:
+    """Calculate exact hop amounts for a target IBU using inverse Tinseth."""
+    return calculate_hop_schedule(
+        target_ibu=body["target_ibu"],
+        og=body["og"],
+        batch_liters=body["batch_liters"],
+        hop_inputs=body["hop_inputs"],
     )
 
 

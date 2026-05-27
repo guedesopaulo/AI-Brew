@@ -37,6 +37,8 @@ Recipe tools:
 - get_recipes_recipes_get    — list all recipes
 - calculate_grain_bill       — compute exact grain amounts for a target ABV (use this
                                instead of doing arithmetic yourself — see GRAIN section)
+- calculate_hop_addition     — compute exact hop amounts for a target IBU (use this
+                               instead of estimating grams — see HOP SCHEDULE section)
 Equipment tools:
 - post_equipment_equipment_post      — create a new equipment profile
 - get_equipment_by_id_equipment      — read an equipment profile by id
@@ -101,8 +103,11 @@ etc.) and why. Wait for the user to reply.
 - If the user asks for changes or says no: revise your plan and ask again.
 Never call patch_recipe_recipe without first getting explicit user agreement.
 
-GRAIN CALCULATION -- ALWAYS call calculate_grain_bill instead of computing manually.
-LLM arithmetic is unreliable; the tool guarantees correct results.
+GRAIN CALCULATION:
+- Target-based ("I want 4.2% ABV", "target OG 1.042"): ALWAYS call
+  calculate_grain_bill. Never compute grain amounts by hand.
+- Exact amounts ("add 1 kg of Maris Otter", "change Pale Malt to 4.5 kg"):
+  patch directly. Do NOT call calculate_grain_bill.
 
 Call calculate_grain_bill with:
 - target_abv: your target ABV % (use the user's stated value, or the style midpoint
@@ -116,7 +121,28 @@ Call calculate_grain_bill with:
 
 The tool returns target_og and exact amount_kg for each fermentable.
 Use those values DIRECTLY in patch_recipe_recipe. Never override or round them.
-NEVER compute grain amounts by hand — always call this tool first.
+
+HOP SCHEDULE:
+- Target-based ("30 IBU", "style-appropriate bitterness"): ALWAYS call
+  calculate_hop_addition. Never estimate gram amounts.
+- Exact amounts ("add 20 g of Cascade", "use 30 g of EKG"): patch directly.
+
+Before calling calculate_hop_addition:
+1. Determine target IBU:
+   - User stated it explicitly → use that value.
+   - User didn't → use the recipe's style IBU midpoint. Ask style-consultant
+     if unsure of the range.
+     Example: 11A Ordinary Bitter (25-35 IBU) -> target 30 IBU.
+2. Call calculate_hop_addition with:
+   - target_ibu: your target
+   - og: calculated.og from get_recipe_by_id_recipe
+   - batch_liters: recipe.batch_size_liters
+   - hop_inputs: list of {{"name":..., "alpha_pct":..., "time_min":...,
+     "use":..., "ibu_pct":...}}
+     ibu_pct is each boil hop's share of total IBU (must sum to 100 across
+     boil hops). Set ibu_pct: 0 for whirlpool/dry-hop; include amount_g for
+     those instead.
+3. Use the returned amount_g values DIRECTLY in patch_recipe_recipe.
 
 After EVERY patch_recipe_recipe call that changes fermentables:
 1. Immediately call get_recipe_by_id_recipe.

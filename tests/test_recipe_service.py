@@ -5,6 +5,7 @@ import pytest
 from src.models.recipe import Fermentable
 from src.models.recipe import GrainInput
 from src.models.recipe import Hop
+from src.models.recipe import HopAdditionInput
 from src.models.recipe import Recipe
 from src.models.recipe import Yeast
 from src.service.recipe import calc_abv
@@ -13,6 +14,7 @@ from src.service.recipe import calc_ibu_tinseth
 from src.service.recipe import calc_og
 from src.service.recipe import calc_srm_morey
 from src.service.recipe import calculate_grain_bill
+from src.service.recipe import calculate_hop_schedule
 from src.service.recipe import calculate_stats
 
 # ---------------------------------------------------------------------------
@@ -297,3 +299,136 @@ def test_calculate_grain_bill_higher_efficiency_less_grain() -> None:
         grain_inputs=single_malt,
     )
     assert low["total_grain_kg"] > high["total_grain_kg"]
+
+
+# ---------------------------------------------------------------------------
+# calculate_hop_schedule
+# ---------------------------------------------------------------------------
+
+
+def test_calculate_hop_schedule_single_boil_hit_target_ibu() -> None:
+    # EKG 5% / 60 min / OG 1.035 / 40 L / target 30 IBU → verified ~91 g
+    ekg: list[HopAdditionInput] = [
+        {
+            "name": "EKG",
+            "alpha_pct": 5.0,
+            "time_min": 60,
+            "use": "boil",
+            "ibu_pct": 100.0,
+        },
+    ]
+    result = calculate_hop_schedule(
+        target_ibu=30.0,
+        og=1.035,
+        batch_liters=40.0,
+        hop_inputs=ekg,
+    )
+    assert abs(result["total_ibu"] - 30.0) < 0.5
+    assert len(result["hops"]) == 1
+    assert abs(result["hops"][0]["amount_g"] - 90.9) < 2.0
+
+
+def test_calculate_hop_schedule_total_ibu_matches_forward_tinseth() -> None:
+    # Two boil additions split 60/40 across Cascade and Centennial.
+    hops: list[HopAdditionInput] = [
+        {
+            "name": "Cascade",
+            "alpha_pct": 5.5,
+            "time_min": 60,
+            "use": "boil",
+            "ibu_pct": 60.0,
+        },
+        {
+            "name": "Centennial",
+            "alpha_pct": 10.0,
+            "time_min": 15,
+            "use": "boil",
+            "ibu_pct": 40.0,
+        },
+    ]
+    result = calculate_hop_schedule(
+        target_ibu=40.0,
+        og=1.050,
+        batch_liters=20.0,
+        hop_inputs=hops,
+    )
+    assert abs(result["total_ibu"] - 40.0) < 1.0
+    assert len(result["hops"]) == 2
+
+
+def test_calculate_hop_schedule_non_boil_passes_through() -> None:
+    # Dry-hop should not contribute IBU; amount defaults to 20 g.
+    hops: list[HopAdditionInput] = [
+        {
+            "name": "Cascade",
+            "alpha_pct": 5.5,
+            "time_min": 60,
+            "use": "boil",
+            "ibu_pct": 100.0,
+        },
+        {
+            "name": "Citra",
+            "alpha_pct": 12.0,
+            "time_min": 0,
+            "use": "dry-hop",
+            "ibu_pct": 0.0,
+        },
+    ]
+    result = calculate_hop_schedule(
+        target_ibu=25.0,
+        og=1.045,
+        batch_liters=20.0,
+        hop_inputs=hops,
+    )
+    dry_hop = next(h for h in result["hops"] if h["use"] == "dry-hop")
+    assert dry_hop["amount_g"] == pytest.approx(20.0)
+    # total_ibu should only reflect the boil hop
+    assert abs(result["total_ibu"] - 25.0) < 1.0
+
+
+def test_calculate_hop_schedule_zero_ibu_pct_gives_zero_grams() -> None:
+    # A boil hop with ibu_pct=0 should result in 0g (LLM may send this pattern).
+    hops: list[HopAdditionInput] = [
+        {
+            "name": "Magnum",
+            "alpha_pct": 12.0,
+            "time_min": 60,
+            "use": "boil",
+            "ibu_pct": 0.0,
+        },
+    ]
+    result = calculate_hop_schedule(
+        target_ibu=30.0,
+        og=1.050,
+        batch_liters=20.0,
+        hop_inputs=hops,
+    )
+    assert result["hops"][0]["amount_g"] == pytest.approx(0.0)
+
+
+def test_calculate_hop_schedule_non_boil_explicit_amount() -> None:
+    hops: list[HopAdditionInput] = [
+        {
+            "name": "EKG",
+            "alpha_pct": 5.0,
+            "time_min": 60,
+            "use": "boil",
+            "ibu_pct": 100.0,
+        },
+        {
+            "name": "Saaz",
+            "alpha_pct": 3.5,
+            "time_min": 0,
+            "use": "dry-hop",
+            "ibu_pct": 0.0,
+            "amount_g": 50.0,
+        },
+    ]
+    result = calculate_hop_schedule(
+        target_ibu=20.0,
+        og=1.040,
+        batch_liters=20.0,
+        hop_inputs=hops,
+    )
+    dry_hop = next(h for h in result["hops"] if h["use"] == "dry-hop")
+    assert dry_hop["amount_g"] == pytest.approx(50.0)
