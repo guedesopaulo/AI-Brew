@@ -4,14 +4,8 @@ import { Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { StyleCombobox } from "@/components/StyleCombobox";
 import {
   Dialog,
   DialogContent,
@@ -156,21 +150,12 @@ export function RecipeDetailPage() {
               </div>
               <div className="col-span-2 space-y-1">
                 <Label>Style</Label>
-                <Select
-                  defaultValue={recipe.style}
-                  onValueChange={(val: string | null) => val && save("style", val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select style" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {styles?.map((s) => (
-                      <SelectItem key={s.name} value={s.name}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <StyleCombobox
+                  value={recipe.style}
+                  onChange={(val) => save("style", val)}
+                  styles={styles ?? []}
+                  disabled={patch.isPending}
+                />
               </div>
               <div className="col-span-2">
                 <EquipmentSelector

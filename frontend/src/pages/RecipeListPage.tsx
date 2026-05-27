@@ -15,7 +15,7 @@ export function RecipeListPage() {
     await createRecipe.mutateAsync({
       id,
       name: "New Recipe",
-      style: "American IPA",
+      style: "",
       batch_size_liters: 20,
       fermentables: [],
       hops: [],
