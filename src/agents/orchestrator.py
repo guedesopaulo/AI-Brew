@@ -109,15 +109,22 @@ GRAIN CALCULATION:
 - Exact amounts ("add 1 kg of Maris Otter", "change Pale Malt to 4.5 kg"):
   patch directly. Do NOT call calculate_grain_bill.
 
-Call calculate_grain_bill with:
-- target_abv: your target ABV % (use the user's stated value, or the style midpoint
-  if they didn't specify one — e.g. for Irish Dry Stout target 4.2%)
+Call calculate_grain_bill with exactly ONE of:
+- target_abv: float  — user wants a specific ABV% (most common)
+- target_og: float   — user wants a specific OG (e.g. 1.048)
+- target_fg: float   — user wants a specific FG (e.g. 1.010)
+IMPORTANT: include only the field you need. Do NOT pass 0 or null for the
+others — omit them entirely from the JSON payload.
+
+Plus always include:
 - batch_liters: recipe.batch_size_liters (from get_recipe_by_id_recipe)
 - efficiency_pct: equipment profile's brewhouse_efficiency_pct
                   (75 if no profile is linked)
 - yeast_attenuation_pct: recipe.yeast.attenuation_pct
-- grain_inputs: list of {{"name":"...", "ppg":<int>, "pct":<float>}}
-  where pct is each grain's share of the bill and ALL pcts must sum to 100.
+- grain_inputs: list of {{"name":"...", "ppg":<int>, "color_ebc":<float>,
+  "pct":<float>}} where pct is each grain's share and ALL pcts must sum to 100.
+  color_ebc is the grain's typical EBC color (e.g. US 2-row ~4, flaked corn ~1,
+  wheat malt ~4, crystal 60L ~120, roasted barley ~1300).
 
 The tool returns target_og and exact amount_kg for each fermentable.
 Use those values DIRECTLY in patch_recipe_recipe. Never override or round them.

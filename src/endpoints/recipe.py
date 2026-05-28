@@ -58,13 +58,15 @@ async def _resolve_efficiency(recipe: Recipe) -> float:
 
 @router.post("/grain-bill", operation_id="calculate_grain_bill")
 async def calculate_grain_bill_endpoint(body: GrainBillRequest) -> GrainBillResult:
-    """Calculate exact grain amounts for a target ABV."""
+    """Calculate exact grain amounts for a target ABV, OG, or FG."""
     return calculate_grain_bill(
-        target_abv=body["target_abv"],
         batch_liters=body["batch_liters"],
         efficiency_pct=body["efficiency_pct"],
         yeast_attenuation_pct=body["yeast_attenuation_pct"],
         grain_inputs=body["grain_inputs"],
+        target_abv=body.get("target_abv"),
+        target_og=body.get("target_og"),
+        target_fg=body.get("target_fg"),
     )
 
 

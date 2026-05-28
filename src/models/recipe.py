@@ -89,20 +89,25 @@ class Style(TypedDict):
 class GrainInput(TypedDict):
     name: str
     ppg: int
+    color_ebc: float
     pct: float  # share of total grain bill; all pct values must sum to 100
 
 
 class GrainOutput(TypedDict):
     name: str
+    ppg: int
     amount_kg: float
+    color_ebc: float
 
 
 class GrainBillRequest(TypedDict):
-    target_abv: float
     batch_liters: float
     efficiency_pct: float
     yeast_attenuation_pct: float
     grain_inputs: list[GrainInput]
+    target_abv: NotRequired[float]
+    target_og: NotRequired[float]
+    target_fg: NotRequired[float]
 
 
 class GrainBillResult(TypedDict):

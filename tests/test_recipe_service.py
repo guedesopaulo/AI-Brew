@@ -229,9 +229,9 @@ def test_calculate_stats_srm_positive() -> None:
 # ---------------------------------------------------------------------------
 
 _GUINNESS_GRAIN_INPUTS: list[GrainInput] = [
-    {"name": "Pale Malt", "ppg": 37, "pct": 91.0},
-    {"name": "Roasted Barley", "ppg": 25, "pct": 5.0},
-    {"name": "Black Malt", "ppg": 25, "pct": 4.0},
+    {"name": "Pale Malt", "ppg": 37, "color_ebc": 5.0, "pct": 91.0},
+    {"name": "Roasted Barley", "ppg": 25, "color_ebc": 1400.0, "pct": 5.0},
+    {"name": "Black Malt", "ppg": 25, "color_ebc": 1300.0, "pct": 4.0},
 ]
 
 
@@ -261,7 +261,7 @@ def test_calculate_grain_bill_guinness_total_grain() -> None:
         {
             "name": g["name"],
             "amount_kg": g["amount_kg"],
-            "color_ebc": 5.0,
+            "color_ebc": g["color_ebc"],
             "ppg": gi["ppg"],
         }
         for g, gi in zip(result["fermentables"], _GUINNESS_GRAIN_INPUTS, strict=True)
@@ -283,7 +283,9 @@ def test_calculate_grain_bill_pcts_sum_reflected_in_amounts() -> None:
 
 
 def test_calculate_grain_bill_higher_efficiency_less_grain() -> None:
-    single_malt: list[GrainInput] = [{"name": "Pale Malt", "ppg": 37, "pct": 100.0}]
+    single_malt: list[GrainInput] = [
+        {"name": "Pale Malt", "ppg": 37, "color_ebc": 5.0, "pct": 100.0}
+    ]
     low = calculate_grain_bill(
         target_abv=4.2,
         batch_liters=20.0,
@@ -299,6 +301,116 @@ def test_calculate_grain_bill_higher_efficiency_less_grain() -> None:
         grain_inputs=single_malt,
     )
     assert low["total_grain_kg"] > high["total_grain_kg"]
+
+
+def test_calculate_grain_bill_color_ebc_passed_through() -> None:
+    # color_ebc from grain_inputs must appear in the output fermentables
+    inputs: list[GrainInput] = [
+        {"name": "Pale Malt", "ppg": 37, "color_ebc": 5.0, "pct": 90.0},
+        {"name": "Crystal 60L", "ppg": 33, "color_ebc": 120.0, "pct": 10.0},
+    ]
+    result = calculate_grain_bill(
+        batch_liters=20.0,
+        efficiency_pct=75.0,
+        yeast_attenuation_pct=75.0,
+        grain_inputs=inputs,
+        target_abv=5.0,
+    )
+    colors = {f["name"]: f["color_ebc"] for f in result["fermentables"]}
+    assert colors["Pale Malt"] == pytest.approx(5.0)
+    assert colors["Crystal 60L"] == pytest.approx(120.0)
+
+
+def test_calculate_grain_bill_target_og_direct() -> None:
+    # target_og=1.040 must give same result as the equivalent ABV for 75% attenuation
+    # ABV equivalent: (1.040 - 1) * 75/100 * 131.25 = 3.938% → round-trip should match
+    single_malt: list[GrainInput] = [
+        {"name": "Pale Malt", "ppg": 37, "color_ebc": 5.0, "pct": 100.0}
+    ]
+    result = calculate_grain_bill(
+        batch_liters=20.0,
+        efficiency_pct=75.0,
+        yeast_attenuation_pct=75.0,
+        grain_inputs=single_malt,
+        target_og=1.040,
+    )
+    assert result["target_og"] == pytest.approx(1.040, abs=0.001)
+    assert result["target_og_points"] == pytest.approx(40.0, abs=0.5)
+    # Verify grain amounts match the forward calc_og
+    fermentables: list[Fermentable] = [
+        {
+            "name": "Pale Malt",
+            "amount_kg": result["fermentables"][0]["amount_kg"],
+            "color_ebc": 5.0,
+            "ppg": 37,
+        }
+    ]
+    assert abs(calc_og(fermentables, 20.0, 75.0) - 1.040) < 0.002
+
+
+def test_calculate_grain_bill_target_fg_matches_equivalent_og() -> None:
+    # target_fg=1.010 at 75% attenuation → OG = 1 + 0.010/0.25 = 1.040
+    # Must give identical result to target_og=1.040
+    single_malt: list[GrainInput] = [
+        {"name": "Pale Malt", "ppg": 37, "color_ebc": 5.0, "pct": 100.0}
+    ]
+    by_fg = calculate_grain_bill(
+        batch_liters=20.0,
+        efficiency_pct=75.0,
+        yeast_attenuation_pct=75.0,
+        grain_inputs=single_malt,
+        target_fg=1.010,
+    )
+    by_og = calculate_grain_bill(
+        batch_liters=20.0,
+        efficiency_pct=75.0,
+        yeast_attenuation_pct=75.0,
+        grain_inputs=single_malt,
+        target_og=1.040,
+    )
+    assert by_fg["target_og"] == pytest.approx(by_og["target_og"], abs=0.0005)
+    assert by_fg["total_grain_kg"] == pytest.approx(by_og["total_grain_kg"], abs=0.01)
+
+
+def test_calculate_grain_bill_no_target_raises() -> None:
+    single_malt: list[GrainInput] = [
+        {"name": "Pale Malt", "ppg": 37, "color_ebc": 5.0, "pct": 100.0}
+    ]
+    with pytest.raises(ValueError, match="Exactly one"):
+        calculate_grain_bill(
+            batch_liters=20.0,
+            efficiency_pct=75.0,
+            yeast_attenuation_pct=75.0,
+            grain_inputs=single_malt,
+        )
+
+
+def test_calculate_grain_bill_multiple_targets_raises() -> None:
+    single_malt: list[GrainInput] = [
+        {"name": "Pale Malt", "ppg": 37, "color_ebc": 5.0, "pct": 100.0}
+    ]
+    with pytest.raises(ValueError, match="Exactly one"):
+        calculate_grain_bill(
+            batch_liters=20.0,
+            efficiency_pct=75.0,
+            yeast_attenuation_pct=75.0,
+            grain_inputs=single_malt,
+            target_abv=5.0,
+            target_og=1.050,
+        )
+
+
+def test_calculate_grain_bill_full_attenuation_with_target_fg_raises() -> None:
+    with pytest.raises(ValueError, match="less than 100"):
+        calculate_grain_bill(
+            batch_liters=20.0,
+            efficiency_pct=75.0,
+            yeast_attenuation_pct=100.0,
+            grain_inputs=[
+                {"name": "Pale Malt", "ppg": 37, "color_ebc": 5.0, "pct": 100.0}
+            ],
+            target_fg=1.010,
+        )
 
 
 # ---------------------------------------------------------------------------

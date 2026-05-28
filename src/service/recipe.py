@@ -70,19 +70,36 @@ def calc_abv(og: float, fg: float) -> float:
 
 
 def calculate_grain_bill(
-    target_abv: float,
     batch_liters: float,
     efficiency_pct: float,
     yeast_attenuation_pct: float,
     grain_inputs: list[GrainInput],
+    target_abv: float | None = None,
+    target_og: float | None = None,
+    target_fg: float | None = None,
 ) -> GrainBillResult:
-    """Return exact grain amounts needed to hit a target ABV.
+    """Return exact grain amounts for a target ABV, OG, or FG.
 
+    Exactly one of target_abv, target_og, or target_fg must be provided.
     Offloads arithmetic from the LLM to prevent order-of-operations errors.
     """
+    targets = [t for t in (target_abv, target_og, target_fg) if t is not None and t > 0]
+    if len(targets) != 1:
+        raise ValueError(
+            "Exactly one of target_abv, target_og, or target_fg must be provided "
+            "(pass only the one you need; omit or leave out the others)"
+        )
     attenuation = yeast_attenuation_pct / 100
-    target_og = 1 + target_abv / (attenuation * 131.25)
-    target_og_points = (target_og - 1) * 1000
+    if target_abv is not None and target_abv > 0:
+        resolved_og = 1 + target_abv / (attenuation * 131.25)
+    elif target_fg is not None and target_fg > 0:
+        if attenuation >= 1.0:
+            raise ValueError("yeast_attenuation_pct must be less than 100")
+        resolved_og = 1 + (target_fg - 1) / (1 - attenuation)
+    else:
+        assert target_og is not None  # validated above: exactly one target is set
+        resolved_og = target_og
+    target_og_points = (resolved_og - 1) * 1000
     weighted_ppg = sum(g["ppg"] * g["pct"] / 100 for g in grain_inputs)
     batch_gallons = batch_liters * _LITERS_TO_GALLONS
     efficiency = efficiency_pct / 100
@@ -90,11 +107,16 @@ def calculate_grain_bill(
         target_og_points * batch_gallons / (weighted_ppg * _KG_TO_LBS * efficiency)
     )
     fermentables: list[GrainOutput] = [
-        {"name": g["name"], "amount_kg": round(total_grain_kg * g["pct"] / 100, 2)}
+        {
+            "name": g["name"],
+            "ppg": g["ppg"],
+            "amount_kg": round(total_grain_kg * g["pct"] / 100, 2),
+            "color_ebc": g["color_ebc"],
+        }
         for g in grain_inputs
     ]
     return {
-        "target_og": round(target_og, 4),
+        "target_og": round(resolved_og, 4),
         "target_og_points": round(target_og_points, 1),
         "total_grain_kg": round(total_grain_kg, 2),
         "fermentables": fermentables,
