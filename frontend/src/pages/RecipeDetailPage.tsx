@@ -39,6 +39,7 @@ export function RecipeDetailPage() {
   const { data: styles } = useStyles();
   const [profileOpen, setProfileOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const selectedStyle = styles?.find((s) => s.name === recipe?.style);
 
   if (isLoading) {
     return (
@@ -156,6 +157,14 @@ export function RecipeDetailPage() {
                   styles={styles ?? []}
                   disabled={patch.isPending}
                 />
+                {selectedStyle && (
+                  <p className="text-xs text-muted-foreground">
+                    OG {selectedStyle.og_min.toFixed(3)}–{selectedStyle.og_max.toFixed(3)}
+                    {" · "}IBU {selectedStyle.ibu_min}–{selectedStyle.ibu_max}
+                    {" · "}ABV {selectedStyle.abv_min}–{selectedStyle.abv_max}%
+                    {" · "}SRM {selectedStyle.srm_min}–{selectedStyle.srm_max}
+                  </p>
+                )}
               </div>
               <div className="col-span-2">
                 <EquipmentSelector
@@ -173,7 +182,7 @@ export function RecipeDetailPage() {
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 Stats
               </p>
-              <StatsBar stats={recipe.calculated} />
+              <StatsBar stats={recipe.calculated} style={selectedStyle} />
             </div>
 
             <Separator />
