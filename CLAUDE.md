@@ -12,7 +12,7 @@ bash scripts/00_start.sh
 uv run pytest && uv run coverage report -m
 
 # Run a single test
-uv run pytest tests/test_main.py::test_root -v
+uv run pytest tests/test_recipe_service.py::test_calc_og -v
 
 # Lint and format
 uv run ruff check .
@@ -22,7 +22,7 @@ uv run ruff check --fix --unsafe-fixes  # auto-fix with type cleanup
 # Type checking
 uv run mypy .
 
-# Pre-commit (runs ruff + mypy)
+# Pre-commit (runs ruff + mypy + bandit)
 uv run pre-commit run --all-files
 
 # Makefile shortcuts
@@ -34,80 +34,75 @@ make cov       # coverage with --fail-under enforcement
 
 ## Architecture
 
-MCP server + REST API built with FastAPI, connecting LLMs to databases and internal APIs. Each MCP tool has an equivalent REST endpoint.
+Homebrewing recipe assistant: FastAPI backend + FastMCP server (auto-generated from FastAPI routes) + LangGraph/deepagents orchestrator + React frontend.
 
 **Three layers:**
-1. **Middleware** (`middleware.py`) - ASGI-level Bearer token auth with dual-mode support:
-   - **Local dev** (`ENVIRONMENT=local`): Simple bearer token via `LOCAL_API_TOKEN` in `.env`
-   - **Cloud envs** (`dev`/`qas`/`prod`): OAuth2 flow with Microsoft + Access BFF JWT validation
-   - Public paths: `/`, `/health`, `/docs`, `/openapi.json`, `/login`, `/auth_microsoft`, `/callback`
-2. **Orchestration Layer** - Specialist LLM that interprets user intent, routes to correct endpoints with proper parameters, applies guardrails
-3. **Resource Layer** - Executes queries and API calls with no AI logic. Each resource has its own rate limit
+1. **Middleware** (`middleware.py`) — ASGI-level Bearer token auth:
+   - **Local dev** (`ENVIRONMENT=local`): validates `Authorization: Bearer <token>` against `LOCAL_API_TOKEN` from `.env`
+   - **Cloud envs** (`dev`/`qas`/`prod`): passthrough — add JWT/OAuth2 validation here
+   - Public paths: `/`, `/health`, `/docs`, `/openapi.json`
+2. **Agent layer** (`src/agents/`) — LangGraph orchestrator + deepagents sub-agents. Reads/writes recipes via MCP tools. System prompt in `orchestrator.py`.
+3. **Resource layer** (`src/resources/`) — aiosqlite CRUD, no AI logic. Each resource owns its DB schema init.
 
-**Data flow per module** (e.g., oracle, expeditus):
-`endpoints/<module>.py` (route + validation) -> `service/<module>.py` (business logic) -> `resources/<module>.py` (DB/API calls)
+**Data flow:**
+`endpoints/<module>.py` (route + validation) → `service/<module>.py` (pure business logic) → `resources/<module>.py` (DB/IO)
 
-- **Endpoints** define FastAPI routes, query validation, and per-endpoint rate limits via `dependencies.rate_limit()`
-- **Services** contain pure functions that transform data; oracle services load SQL from `sql/*.sql` files at import time
-- **Resources** handle external I/O: `resources/oracle.py` manages an oracledb `SessionPool` singleton (`DBManager`), `resources/expeditus.py` makes async httpx calls
+Modules: `recipe`, `equipment`, `chat`, `echo`.
 
-**Rate limiting:** Each endpoint creates its own independent limiter via `rate_limit(max_requests, window)` in `dependencies.py`. Uses per-IP sliding window.
+**MCP:**
+`FastMCP.from_fastapi(app)` auto-generates MCP tools from all FastAPI routes at startup. Mounted at `/mcp`. The agent connects to it via `MultiServerMCPClient` using streamable HTTP. In `ENVIRONMENT=local`, `httpx_client_kwargs` passes the Bearer token so internal ASGI calls clear middleware.
 
-**Config:** `config.py` uses pydantic-settings (`Settings` class) loading from `.env`. Singleton via `settings = Settings.model_validate({})`.
-
-**External resources:**
-
-None currently. When adding a new resource:
-- Create `src/resources/<module>.py` for all external I/O (DB connections, HTTP clients)
-- Use `httpx.AsyncClient` for outbound HTTP; manage lifecycle via FastAPI lifespan
-- Add connection settings to `src/config.py` (`Settings` class)
-- Mock or monkeypatch the resource layer in tests — never hit real external systems in CI
+**Config:** `config.py` uses pydantic-settings (`Settings`) loading from `.env`. Key vars: `ENVIRONMENT`, `LOCAL_API_TOKEN`, `OLLAMA_MODEL`, `OLLAMA_BASE_URL`, `LLM_PROVIDER`, `LLM_MODEL`, `ANTHROPIC_API_KEY`, `MCP_BASE_URL`, `DB_PATH`.
 
 **Authentication:**
 
 `BearerTokenMiddleware` in `middleware.py` (ASGI-level, applied globally):
 - **Public paths** — `/`, `/health`, `/docs`, `/openapi.json` bypass auth entirely
-- **`ENVIRONMENT=local`** — validates the `Authorization: Bearer <token>` header against `LOCAL_API_TOKEN` from `.env`
-- **Cloud envs** (`dev`/`qas`/`prod`) — middleware passes through (placeholder for JWT/OAuth2 validation)
+- **`ENVIRONMENT=local`** — validates `Authorization: Bearer <token>` against `LOCAL_API_TOKEN`
+- **Cloud envs** — passthrough (add your JWT logic there)
 
-To add a new public path, append it to `UNPROTECTED_PATHS` in `middleware.py`.
+To add a public path, append it to `_PUBLIC_PATHS` in `middleware.py`.
+
+**LLM / model selection** (`src/agents/base.py`):
+- `ENVIRONMENT=local` → `ChatOllama(model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL)`
+- Cloud → `"{LLM_PROVIDER}:{LLM_MODEL}"` string resolved by langchain (e.g. `anthropic:claude-sonnet-4-6`)
 
 ## Code Standards
 
 **Type safety:**
 - No `dict[str, Any]` or `JSONResponse` for structured payloads
-- Use `TypedDict` for all structured entities (API payloads, DB documents, configs)
-- Use `BaseModel` for FastStream message broker schemas
+- Use `TypedDict` for all structured entities (API payloads, DB rows, configs)
 - Modern syntax: `str | None`, `dict`, `list` (not `Optional`, `Dict`, `List`)
 
 **Testing:**
-- Naming: `test_<function>_<scenario>` (e.g., `test_price_schema_when_valid_payload`)
+- Naming: `test_<function>_<scenario>` (e.g., `test_calculate_grain_bill_guinness_target_og`)
 - Every FastAPI endpoint needs at least a smoke test
 - Minimum 70% coverage (enforced in `pyproject.toml`)
 
 **Style:**
-- KISS over OOP: prefer pure functions and dataclasses
+- KISS over OOP: prefer pure functions and TypedDicts
 - `async def` for all I/O-bound routes
 - Structured logging with loguru
-- Ruff config in `ruff.toml`: UP040 is ignored (mypy CI compatibility), isort uses `force-single-line`, `ARG` rules are relaxed in tests
+- Ruff config in `ruff.toml`: UP040 ignored (mypy compatibility), isort `force-single-line`, ARG rules relaxed in tests
 
 ---
 
 ## React Frontend (`frontend/`)
 
 ### Stack (locked — do not deviate)
-- **Vite + React 18 + TypeScript** — `strict: true` in `tsconfig.json`
-- **Tailwind CSS** — all styling via utility classes; no inline `style=` props, no CSS modules
-- **shadcn/ui** — UI primitives (Button, Input, Table, Dialog, etc.); add with `npx shadcn@latest add <component>`; never copy styles manually
-- **TanStack Query v5** (React Query) — all server state; no raw `useEffect + fetch` patterns
-- **React Router v6** — declarative routes in `App.tsx`
+- **Vite + React 18 + TypeScript** — `strict: true` in `tsconfig.app.json`
+- **Tailwind CSS v4** — all styling via utility classes; no inline `style=` props, no CSS modules
+- **shadcn/ui (Base UI)** — UI primitives; add with `npx shadcn@latest add <component>`; never copy styles manually. Base UI has no `asChild` prop — use `render=` instead.
+- **TanStack Query v5** — all server state; no raw `useEffect + fetch` patterns
+- **React Router v7** — declarative routes in `App.tsx`
 
 ### Commands
 ```bash
 cd frontend
-npm run dev        # Vite dev server on :5173, proxies /api → FastAPI :8000
-npm run build      # TypeScript check + Vite build → dist/
-npm run lint       # ESLint
+npm install          # install deps (required before first build)
+npm run dev          # Vite dev server on :5173, proxies /api → FastAPI :8000
+npm run build        # TypeScript check + Vite build → dist/
+npm run lint         # ESLint
 ```
 
 ### File structure (enforced)
@@ -116,7 +111,7 @@ frontend/src/
   api/        ← one file per backend resource; all fetch() calls live here only
   components/ ← reusable UI pieces; no page-level logic or data fetching
   pages/      ← one file per route; composes components, owns query calls
-  types/      ← TypeScript types mirroring backend models exactly
+  types/      ← TypeScript types mirroring backend TypedDicts exactly
   hooks/      ← custom hooks (useRecipe, useChat, useSession)
   lib/        ← pure utilities (sse.ts, utils.ts)
 ```
@@ -126,9 +121,9 @@ frontend/src/
 - **All API response types** must mirror backend TypedDicts from `src/models/recipe.py` exactly (same field names, same nesting)
 - **One named export per file** — no default exports; name matches the filename
 - **Components over ~100 lines must be split**
-- **No prop drilling beyond 2 levels** — use React Context for auth token and session state
 - **All mutations must invalidate** the relevant query key immediately: `queryClient.invalidateQueries({ queryKey: ['recipe', id] })`
 - **SSE stream lives exclusively in `hooks/useChat.ts`** — never inline stream handling in a component
+- **Token SSE events are JSON-encoded** — always `JSON.parse(data)` when handling `event: token`
 
 ### Data fetching
 - `useQuery` for GETs, `useMutation` for POST/PATCH/DELETE
