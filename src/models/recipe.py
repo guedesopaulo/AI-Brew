@@ -32,6 +32,7 @@ class CalculatedStats(TypedDict):
     abv: float
     ibu: float
     srm: float
+    bu_gu: float
 
 
 class Recipe(TypedDict):

@@ -80,7 +80,7 @@ def test_get_recipe_returns_stats(client: TestClient) -> None:
     data = response.json()
     assert data["id"] == "abc-123"
     assert "calculated" in data
-    assert set(data["calculated"].keys()) == {"og", "fg", "abv", "ibu", "srm"}
+    assert set(data["calculated"].keys()) == {"og", "fg", "abv", "ibu", "srm", "bu_gu"}
 
 
 def test_get_recipe_not_found(client: TestClient) -> None:
@@ -142,7 +142,14 @@ def test_get_recipes_returns_list(client: TestClient) -> None:
     assert len(data) == 1
     assert data[0]["id"] == "abc-123"
     assert "calculated" in data[0]
-    assert set(data[0]["calculated"].keys()) == {"og", "fg", "abv", "ibu", "srm"}
+    assert set(data[0]["calculated"].keys()) == {
+        "og",
+        "fg",
+        "abv",
+        "ibu",
+        "srm",
+        "bu_gu",
+    }
 
 
 def test_get_recipes_empty(client: TestClient) -> None:

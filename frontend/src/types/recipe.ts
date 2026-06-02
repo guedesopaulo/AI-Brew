@@ -26,6 +26,7 @@ export interface CalculatedStats {
   abv: number;
   ibu: number;
   srm: number;
+  bu_gu: number;
 }
 
 export interface Recipe {
