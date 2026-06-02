@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Trash2 } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,10 @@ import { useRecipe, usePatchRecipe, useStyles, useDeleteRecipe } from "@/hooks/u
 import { EquipmentSelector } from "@/components/EquipmentSelector";
 import type { Fermentable, Hop, Yeast, RecipePatch } from "@/types/recipe";
 
+const CHAT_MIN_PCT = 20;
+const CHAT_MAX_PCT = 65;
+const CHAT_DEFAULT_PCT = 40;
+
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const recipeId = id!;
@@ -40,6 +44,31 @@ export function RecipeDetailPage() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const selectedStyle = styles?.find((s) => s.name === recipe?.style);
+
+  const [chatWidth, setChatWidth] = useState(CHAT_DEFAULT_PCT);
+  const [chatVisible, setChatVisible] = useState(true);
+  const isDragging = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!isDragging.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      setChatWidth(Math.max(CHAT_MIN_PCT, Math.min(CHAT_MAX_PCT, pct)));
+    }
+    function onMouseUp() {
+      isDragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -79,7 +108,7 @@ export function RecipeDetailPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="h-screen bg-background flex flex-col">
         <header className="border-b px-6 py-3 flex items-center justify-between gap-2">
           <Link to="/" className={buttonVariants({ variant: "ghost" })}>
             ← My Recipes
@@ -88,6 +117,18 @@ export function RecipeDetailPage() {
             {recipe.name}
           </h1>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setChatVisible((v) => !v)}
+              title={chatVisible ? "Hide chat" : "Show chat"}
+            >
+              {chatVisible ? (
+                <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
             <Button variant="outline" onClick={() => setProfileOpen(true)}>
               Profile
             </Button>
@@ -121,11 +162,35 @@ export function RecipeDetailPage() {
           </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
+        <div ref={containerRef} className="flex-1 flex overflow-hidden">
           {/* Chat panel */}
-          <div className="w-2/5 border-r flex flex-col p-4 min-h-0">
-            <ChatPanel recipeId={recipeId} />
+          <div
+            className="flex flex-col min-h-0 overflow-hidden transition-[width] duration-150"
+            style={{ width: chatVisible ? `${chatWidth}%` : "0" }}
+          >
+            <div className="flex flex-col h-full p-4 min-h-0">
+              <ChatPanel recipeId={recipeId} />
+            </div>
           </div>
+
+          {/* Drag handle */}
+          {chatVisible && (
+            <div
+              className="w-1.5 shrink-0 hover:bg-primary/30 cursor-col-resize flex items-center justify-center group transition-colors border-r border-border"
+              onMouseDown={(e) => {
+                isDragging.current = true;
+                document.body.style.cursor = "col-resize";
+                document.body.style.userSelect = "none";
+                e.preventDefault();
+              }}
+            >
+              <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="w-0.5 h-0.5 rounded-full bg-muted-foreground" />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Recipe panel */}
           <div className="flex-1 overflow-y-auto p-4 space-y-5">
