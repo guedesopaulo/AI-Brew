@@ -53,11 +53,12 @@ export function useChat(recipeId: string, sessionId: string): UseChatReturn {
           if (abortRef.current) break;
 
           if (event === "token") {
+            const text: string = JSON.parse(data) as string;
             setMessages((prev) => {
               const updated = [...prev];
               updated[updated.length - 1] = {
                 ...updated[updated.length - 1],
-                content: updated[updated.length - 1].content + data,
+                content: updated[updated.length - 1].content + text,
               };
               return updated;
             });

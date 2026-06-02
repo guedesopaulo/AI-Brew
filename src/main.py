@@ -56,8 +56,18 @@ app.include_router(recipe_router)
 app.include_router(equipment_router)
 app.include_router(chat_router)
 
-# MCP: auto-generate tools from all FastAPI routes
-mcp = FastMCP.from_fastapi(app, name="python-dev")
+# MCP: auto-generate tools from all FastAPI routes.
+# In local env, pass the token so internal ASGI calls clear BearerTokenMiddleware.
+_mcp_headers = (
+    {"Authorization": f"Bearer {settings.LOCAL_API_TOKEN}"}
+    if settings.LOCAL_API_TOKEN
+    else {}
+)
+mcp = FastMCP.from_fastapi(
+    app,
+    name="python-dev",
+    httpx_client_kwargs={"headers": _mcp_headers},
+)
 mcp_app = mcp.http_app(transport="http", path="/")
 app.mount("/mcp", mcp_app)
 
