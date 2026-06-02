@@ -192,10 +192,12 @@ def calculate_stats(
     """Derive all calculated stats from a recipe."""
     og = calc_og(recipe["fermentables"], recipe["batch_size_liters"], efficiency_pct)
     fg = calc_fg(og, recipe["yeast"]["attenuation_pct"])
+    ibu = calc_ibu_tinseth(recipe["hops"], og, recipe["batch_size_liters"])
     return {
         "og": og,
         "fg": fg,
         "abv": calc_abv(og, fg),
-        "ibu": calc_ibu_tinseth(recipe["hops"], og, recipe["batch_size_liters"]),
+        "ibu": ibu,
         "srm": calc_srm_morey(recipe["fermentables"], recipe["batch_size_liters"]),
+        "bu_gu": round(ibu / ((og - 1) * 1000), 2) if og > 1 else 0.0,
     }

@@ -195,7 +195,7 @@ SIMPLE_RECIPE: Recipe = {
 
 def test_calculate_stats_returns_all_fields() -> None:
     stats = calculate_stats(SIMPLE_RECIPE)
-    assert set(stats.keys()) == {"og", "fg", "abv", "ibu", "srm"}
+    assert set(stats.keys()) == {"og", "fg", "abv", "ibu", "srm", "bu_gu"}
 
 
 def test_calculate_stats_og_fg_abv_consistent() -> None:
@@ -222,6 +222,21 @@ def test_calculate_stats_respects_custom_efficiency() -> None:
 def test_calculate_stats_srm_positive() -> None:
     stats = calculate_stats(SIMPLE_RECIPE)
     assert stats["srm"] > 0
+
+
+def test_calculate_stats_bu_gu_known_value() -> None:
+    # SIMPLE_RECIPE: 4kg Pale Malt 20L + 30g Cascade 5.5% 60min → OG ~1.046, IBU ~19
+    # BU/GU = 19 / ((1.046 - 1) * 1000) = 19 / 46 ≈ 0.41
+    stats = calculate_stats(SIMPLE_RECIPE)
+    assert stats["bu_gu"] == pytest.approx(0.41, abs=0.05)
+    assert 0.2 < stats["bu_gu"] < 0.7  # reasonable pale ale range
+
+
+def test_calculate_stats_bu_gu_zero_when_no_og() -> None:
+    no_grain_recipe: Recipe = {**SIMPLE_RECIPE, "fermentables": []}
+    stats = calculate_stats(no_grain_recipe)
+    assert stats["og"] == 1.0
+    assert stats["bu_gu"] == 0.0
 
 
 # ---------------------------------------------------------------------------

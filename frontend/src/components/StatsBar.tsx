@@ -89,6 +89,7 @@ export function StatsBar({ stats, style }: StatsBarProps) {
             ["ABV", `${stats.abv.toFixed(1)}%`],
             ["IBU", stats.ibu.toFixed(0)],
             ["SRM", stats.srm.toFixed(1)],
+            ["BU/GU", stats.bu_gu.toFixed(2)],
           ] as [string, string][]
         ).map(([label, val]) => (
           <span
@@ -102,8 +103,12 @@ export function StatsBar({ stats, style }: StatsBarProps) {
     );
   }
 
+  // BU/GU range derived from style's IBU and OG bounds (BJCP has no explicit BU/GU field)
+  const buGuMin = style.ibu_min / (Math.max((style.og_max - 1) * 1000, 1));
+  const buGuMax = style.ibu_max / (Math.max((style.og_min - 1) * 1000, 1));
+
   return (
-    <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-5">
+    <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-6">
       <StatBar
         label="OG"
         value={stats.og}
@@ -138,6 +143,13 @@ export function StatsBar({ stats, style }: StatsBarProps) {
         min={style.srm_min}
         max={style.srm_max}
         format={(v) => v.toFixed(1)}
+      />
+      <StatBar
+        label="BU/GU"
+        value={stats.bu_gu}
+        min={buGuMin}
+        max={buGuMax}
+        format={(v) => v.toFixed(2)}
       />
     </div>
   );
